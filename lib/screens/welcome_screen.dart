@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-//import 'package:campusconnect/screens/login.dart';
-
 import 'login.dart';
-
 class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

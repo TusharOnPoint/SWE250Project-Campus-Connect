@@ -1,9 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'home.dart'; // Ensure this import is correct
-import '../widgets/custom_button.dart';
-import '../widgets/custom_textfield.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'signup.dart';
+import 'home.dart';
+import 'forgot_password.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,6 +13,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscureText = true;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String _errorMessage = "";
 
   @override
   void dispose() {
@@ -22,66 +23,126 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// Login without any checks or verification
-  void _login() {
-    // Directly navigate to HomeScreen without any checks
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen()),
-    );
+  void _login() async {
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please enter email and password")),
+      );
+      return;
+    }
+
+    try {
+      // Attempt to sign in the user
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login Successful!")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    } catch (e) {
+      if (e is FirebaseAuthException) {
+        debugPrint("Firebase Auth Error Code: ${e.code}, Message: ${e.message}");
+
+        setState(() {
+          // Display a single generic error message for any error
+          _errorMessage = "If you're new, SignUp or Did you forget your password?";
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorMessage)),
+        );
+      } else {
+        setState(() {
+          _errorMessage = "Unexpected Error: ${e.toString()}";
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background_login.jpg'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/logo.png', height: 100),
-                SizedBox(height: 20),
-                CustomTextField(
-                  controller: _emailController,
-                  hintText: 'Email',
-                  icon: Icons.email,
-                ),
-                SizedBox(height: 10),
-                CustomTextField(
-                  controller: _passwordController,
-                  hintText: 'Password',
-                  icon: Icons.lock,
-                  isPassword: true,
-                ),
-                SizedBox(height: 20),
-                CustomButton(
-                  text: 'Login',
-                  onPressed: _login, // Directly call _login without any checks
-                ),
-                SizedBox(height: 10),
-                Text('OR', style: TextStyle(color: Colors.white)),
-                SizedBox(height: 10),
-                ElevatedButton.icon(
-                  onPressed: () {}, // Disabled Google Sign-In
-                  icon: Image.asset('assets/images/google_icon.jpg', height: 24),
-                  label: Text('Sign in with Google'),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.black,
-                    backgroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  ),
-                ),
-              ],
+      appBar: AppBar(title: Text("Login"), backgroundColor: Colors.blue),
+      body: Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/logo.png', height: 100),
+            SizedBox(height: 20),
+            Text("Login", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            SizedBox(height: 20),
+            TextField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: "Email",
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
+            SizedBox(height: 10),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscureText,
+              decoration: InputDecoration(
+                labelText: "Password",
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+
+            // Align "Forgot Password?" button to the right
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
+                  );
+                },
+                child: Text("Forgot Password?", style: TextStyle(color: Colors.blue)),
+              ),
+            ),
+
+            SizedBox(height: 10),
+
+            // Login Button
+            ElevatedButton(
+              onPressed: _login,
+              child: Text("Login"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50),
+                backgroundColor: Colors.blue,
+              ),
+            ),
+
+            SizedBox(height: 10),
+
+            // Sign Up Navigation
+            Text("Don't have an account?"),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SignUpScreen()),
+                );
+              },
+              child: Text("Sign Up", style: TextStyle(color: Colors.blue)),
+            ),
+          ],
         ),
       ),
     );

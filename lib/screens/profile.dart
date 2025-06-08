@@ -1,80 +1,170 @@
 import 'package:flutter/material.dart';
-import 'edit_profile.dart'; // Ensure you create an edit profile screen
-import 'login.dart'; // Ensure you have a login screen
-import 'post_content.dart'; // A screen where users can post content
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'edit_profile.dart';
+import 'login.dart';
+import 'post_content.dart';
+// 2021831003@student.sust.edu
+class ProfileScreen extends StatefulWidget {
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
 
-class ProfileScreen extends StatelessWidget {
+class _ProfileScreenState extends State<ProfileScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  // Fetch user data from Firestore
+  Future<void> _fetchUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      print("Current user UID: ${user.uid}");
+      try {
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+          print("User document found: ${userDoc.data()}");
+          setState(() {
+            userData = userDoc.data() as Map<String, dynamic>;
+          });
+        } else {
+          print("No user document exists for this UID.");
+        }
+      } catch (e) {
+        print('Error fetching user data: $e');
+      }
+    } else {
+      print("User is not logged in.");
+    }
+  }
+
+
+  // Stream for fetching posts
+  Stream<QuerySnapshot> _fetchPosts() {
+    return _firestore
+        .collection('posts')
+        .where('userId', isEqualTo: _auth.currentUser?.uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // Update bio in Firestore
+  Future<void> _updateBio(String newBio) async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      try {
+        await _firestore.collection('users').doc(user.uid).update({
+          'bio': newBio,
+        });
+        _fetchUserData();  // Refresh data after update
+      } catch (e) {
+        print('Error updating bio: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    //_fetchUserData();
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Profile'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: Colors.red),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Profile Picture
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: AssetImage('assets/images/user_profile.jpeg'),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/cover_photo.jpg'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -40,
+                  child: CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.white,
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundImage: AssetImage('assets/images/user_profile.jpeg'),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-
-            // User Name
-            Text(
-              "Abdul Kuddus",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            SizedBox(height: 50),
+            userData == null
+                ? Container(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            )
+                : Column(
+              children: [
+                Text(
+                  userData? ['username'] ?? "User Name",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _auth.currentUser?.email ?? "user@example.com",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                SizedBox(height: 16),
+                _buildProfileDetail(Icons.school, "University", userData?['university'] ?? "Not set"),
+                _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
+                _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
+                _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
+                SizedBox(height: 16),
+                // Bio Section with Edit Option
+                _buildBioSection(),
+                SizedBox(height: 16),
+              ],
             ),
-            SizedBox(height: 8),
-
-            // Email
-            Text(
-              "abdulkuddus10@example.com",
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                    );
+                    _fetchUserData(); // Refresh profile data after returning
+                  },
+                  icon: Icon(Icons.edit),
+                  label: Text("Edit Profile"),
+                ),
+                SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => PostContentScreen()),
+                    );
+                  },
+                  icon: Icon(Icons.add_a_photo),
+                  label: Text("Post Content"),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                ),
+              ],
             ),
             SizedBox(height: 20),
-
-            // Profile Details
-            _buildProfileDetail(Icons.school, "University", "Dhaka University"),
-            _buildProfileDetail(Icons.work, "Workplace", "Software Engineer at ABC Tech"),
-            _buildProfileDetail(Icons.sports_soccer, "Hobbies", "Football, Eating, Sleeping"),
-            _buildProfileDetail(Icons.star, "Achievements", "Existing"),
-
+            Text("Your Posts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 20),
-
-            // Edit Profile Button
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen()));
-              },
-              icon: Icon(Icons.edit),
-              label: Text("Edit Profile"),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-            ),
-            SizedBox(height: 20),
-
-            // Share Content Button
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => PostContentScreen()));
-              },
-              icon: Icon(Icons.add_a_photo),
-              label: Text("Post/Share Content"),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                backgroundColor: Colors.blueAccent,
-              ),
+            TextButton.icon(
+              onPressed: () => _showLogoutDialog(context),
+              icon: Icon(Icons.logout, color: Colors.red),
+              label: Text("Logout", style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -82,10 +172,9 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // Function to Build Profile Detail Rows
   Widget _buildProfileDetail(IconData icon, String title, String detail) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
       child: Row(
         children: [
           Icon(icon, color: Colors.blue),
@@ -98,9 +187,68 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  } // return
+
+  // Bio Section with an editable bio
+  Widget _buildBioSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 10),
+          Text("Bio:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(userData?['bio'] ?? "No bio set", style: TextStyle(fontSize: 16, color: Colors.black87)),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit, color: Colors.blue),
+            onPressed: () {
+              _showEditBioDialog();
+            },
+          ),
+        ],
+      ),
+    );
   }
 
-  // Logout Confirmation Dialog
+  // Dialog for editing bio
+  void _showEditBioDialog() {
+    TextEditingController bioController = TextEditingController();
+    bioController.text = userData?['bio'] ?? "";
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Edit Bio"),
+        content: TextField(
+          controller: bioController,
+          decoration: InputDecoration(hintText: "Enter your bio"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);  // Close dialog
+            },
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              String newBio = bioController.text.trim();
+              if (newBio.isNotEmpty) {
+                await _updateBio(newBio);  // Update bio in Firestore
+                Navigator.pop(context);  // Close dialog
+              }
+            },
+            child: Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Logout dialog
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -114,7 +262,6 @@ class ProfileScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // Navigate to Login Page after logout
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => LoginScreen()),

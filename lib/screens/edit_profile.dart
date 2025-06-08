@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -6,53 +8,67 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String name = "Abdul Kuddus";
-  String university = "Dhaka University";
-  String workplace = "Software Engineer at ABC Tech";
-  String hobbies = "Football, Reading, Coding";
-  String achievements = "Hackathon Winner 2023";
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _universityController = TextEditingController();
+  final TextEditingController _workplaceController = TextEditingController();
+  final TextEditingController _hobbiesController = TextEditingController();
+  final TextEditingController _achievementsController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        setState(() {
+          _nameController.text = userDoc['name'] ?? '';
+          _universityController.text = userDoc['university'] ?? '';
+          _workplaceController.text = userDoc['workplace'] ?? '';
+          _hobbiesController.text = userDoc['hobbies'] ?? '';
+          _achievementsController.text = userDoc['achievements'] ?? '';
+        });
+      }
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).update({
+        'name': _nameController.text,
+        'university': _universityController.text,
+        'workplace': _workplaceController.text,
+        'hobbies': _hobbiesController.text,
+        'achievements': _achievementsController.text,
+      });
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Edit Profile")),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              _buildTextField("Name", name, (val) => name = val),
-              _buildTextField("University", university, (val) => university = val),
-              _buildTextField("Workplace", workplace, (val) => workplace = val),
-              _buildTextField("Hobbies", hobbies, (val) => hobbies = val),
-              _buildTextField("Achievements", achievements, (val) => achievements = val),
-
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    Navigator.pop(context);
-                  }
-                },
-                child: Text("Save Changes"),
-              ),
-            ],
-          ),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _nameController, decoration: InputDecoration(labelText: "Name")),
+            TextField(controller: _universityController, decoration: InputDecoration(labelText: "University")),
+            TextField(controller: _workplaceController, decoration: InputDecoration(labelText: "Workplace")),
+            TextField(controller: _hobbiesController, decoration: InputDecoration(labelText: "Hobbies")),
+            TextField(controller: _achievementsController, decoration: InputDecoration(labelText: "Achievements")),
+            SizedBox(height: 20),
+            ElevatedButton(onPressed: _updateProfile, child: Text("Save Changes")),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, String initialValue, Function(String) onSaved) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextFormField(
-        initialValue: initialValue,
-        decoration: InputDecoration(labelText: label, border: OutlineInputBorder()),
-        onSaved: (val) => onSaved(val!),
       ),
     );
   }

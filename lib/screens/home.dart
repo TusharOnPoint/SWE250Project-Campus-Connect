@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'profile.dart';  // Ensure this file exists and has ProfileScreen
+import 'profile.dart';
+import 'groups.dart';
+import 'pages.dart';
+import 'notifications.dart';
+import 'massage.dart';
+import 'explore.dart';
+import 'add_friend.dart';
+import 'universities.dart'; // Import UniversitiesScreen
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -12,18 +19,60 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.notifications),
             onPressed: () {
-              // Open notifications
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => NotificationsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.person_add), // Add Friend Icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddFriendScreen()),
+              );
             },
           ),
           IconButton(
             icon: Icon(Icons.message),
             onPressed: () {
-              // Open messages
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MessagesScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.group),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => GroupsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.pages),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PagesScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.school), // University Icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UniversitiesScreen()),
+              );
             },
           ),
         ],
       ),
-      body: _buildPostsList(context),  // Removed the stories section
+      body: _buildPostsList(context),
       bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
@@ -36,7 +85,14 @@ class HomeScreen extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
       onTap: (index) {
-        if (index == 2) {  // Profile Icon Index
+        if (index == 0) {
+          // Do nothing as it's the Home screen
+        } else if (index == 1) {  // Explore Icon Index
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ExploreScreen()),  // Navigate to ExploreScreen
+          );
+        } else if (index == 2) {  // Profile Icon Index
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => ProfileScreen()),
@@ -55,8 +111,9 @@ class HomeScreen extends StatelessWidget {
         VideoPost(
           userName: 'Daniel Brown',
           time: '6 hours ago',
-          content: 'Beautiful SUST at starting of spring!',
+          content: 'Beautiful SUST at the start of spring!',
           videoPath: 'assets/videos/boshonto.mp4',
+          postActions: _buildPostActions(), // Pass post actions
         ),
         _buildTextPost('Sophia Wilson', '8 hours ago', 'Finally submitted my final project! Time to relax.'),
       ],
@@ -71,7 +128,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),  // Changed placeholder
+              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
             ),
             title: Text(userName),
             subtitle: Text(time),
@@ -94,7 +151,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),  // Changed placeholder
+              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
             ),
             title: Text(userName),
             subtitle: Text(time),
@@ -106,7 +163,7 @@ class HomeScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.width * 0.6, // Dynamic height based on screen width
+              maxHeight: MediaQuery.of(context).size.width * 0.6,
             ),
             child: Image.asset(
               imagePath,
@@ -123,9 +180,24 @@ class HomeScreen extends StatelessWidget {
     return ButtonBar(
       alignment: MainAxisAlignment.spaceAround,
       children: [
-        IconButton(icon: Icon(Icons.thumb_up_alt_outlined), onPressed: () {}),
-        IconButton(icon: Icon(Icons.comment_outlined), onPressed: () {}),
-        IconButton(icon: Icon(Icons.share_outlined), onPressed: () {}),
+        IconButton(
+          icon: Icon(Icons.thumb_up_alt_outlined),
+          onPressed: () {
+            print('Liked');
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.comment_outlined),
+          onPressed: () {
+            print('Comment');
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.share_outlined),
+          onPressed: () {
+            print('Shared');
+          },
+        ),
       ],
     );
   }
@@ -136,8 +208,9 @@ class VideoPost extends StatefulWidget {
   final String time;
   final String content;
   final String videoPath;
+  final Widget postActions; // Pass postActions from HomeScreen
 
-  VideoPost({required this.userName, required this.time, required this.content, required this.videoPath});
+  VideoPost({required this.userName, required this.time, required this.content, required this.videoPath, required this.postActions});
 
   @override
   _VideoPostState createState() => _VideoPostState();
@@ -170,7 +243,7 @@ class _VideoPostState extends State<VideoPost> {
         children: [
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),  // Changed placeholder
+              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
             ),
             title: Text(widget.userName),
             subtitle: Text(widget.time),
@@ -183,7 +256,7 @@ class _VideoPostState extends State<VideoPost> {
               ? Container(
             width: double.infinity,
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.width * 0.6, // Dynamically limit height
+              maxHeight: MediaQuery.of(context).size.width * 0.6,
             ),
             child: AspectRatio(
               aspectRatio: _controller.value.aspectRatio,
@@ -205,20 +278,9 @@ class _VideoPostState extends State<VideoPost> {
               });
             },
           ),
-          _buildPostActions(),
+          widget.postActions, // Use the passed postActions
         ],
       ),
-    );
-  }
-
-  Widget _buildPostActions() {
-    return ButtonBar(
-      alignment: MainAxisAlignment.spaceAround,
-      children: [
-        IconButton(icon: Icon(Icons.thumb_up_alt_outlined), onPressed: () {}),
-        IconButton(icon: Icon(Icons.comment_outlined), onPressed: () {}),
-        IconButton(icon: Icon(Icons.share_outlined), onPressed: () {}),
-      ],
     );
   }
 }
