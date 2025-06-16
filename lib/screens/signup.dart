@@ -118,9 +118,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await Future.delayed(Duration(milliseconds: 500));
 
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushNamed(
             context,
-            MaterialPageRoute(builder: (context) => HomeScreen()),
+            "/home",
           );
         }
       } else {
@@ -234,9 +234,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Text("Already have an account?"),
             TextButton(
               onPressed: () {
-                Navigator.push(
+                Navigator.pushNamed(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                  "/login",
                 );
               },
               child: Text("Login", style: TextStyle(color: Colors.blue)),

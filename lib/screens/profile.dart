@@ -1,6 +1,9 @@
+import 'package:campus_connect/services/user_sevice.dart';
+import 'package:campus_connect/widgets/widgetBuilder.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/postCard.dart';
 import 'edit_profile.dart';
 import 'login.dart';
 import 'post_content.dart';
@@ -13,35 +16,21 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  UserService _userService = new UserService();
   Map<String, dynamic>? userData;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _loadUserData();
   }
 
   // Fetch user data from Firestore
-  Future<void> _fetchUserData() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      print("Current user UID: ${user.uid}");
-      try {
-        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-          print("User document found: ${userDoc.data()}");
-          setState(() {
-            userData = userDoc.data() as Map<String, dynamic>;
-          });
-        } else {
-          print("No user document exists for this UID.");
-        }
-      } catch (e) {
-        print('Error fetching user data: $e');
-      }
-    } else {
-      print("User is not logged in.");
-    }
+  Future<void> _loadUserData() async {
+    final data = await _userService.fetchUserData();
+    setState(() {
+      userData = data;
+    });
   }
 
 
@@ -49,35 +38,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Stream<QuerySnapshot> _fetchPosts() {
     return _firestore
         .collection('posts')
-        .where('userId', isEqualTo: _auth.currentUser?.uid)
-        .orderBy('timestamp', descending: true)
+        .where('authorId', isEqualTo: _auth.currentUser?.uid)
+        //.orderBy('timestamp', descending: true)
         .snapshots();
-  }
-
-  // Update bio in Firestore
-  Future<void> _updateBio(String newBio) async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      try {
-        await _firestore.collection('users').doc(user.uid).update({
-          'bio': newBio,
-        });
-        _fetchUserData();  // Refresh data after update
-      } catch (e) {
-        print('Error updating bio: $e');
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     //_fetchUserData();
     return Scaffold(
+
+      appBar: AppBar(
+        elevation: 15,
+        centerTitle: true,
+        title: Text('Profile'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => _showLogoutDialog(context),
+            icon: Icon(Icons.logout, color: Colors.red),
+            label: Text("Logout", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Stack(
+              clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
                 Container(
@@ -90,20 +78,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+
+                // Cover photo edit button
                 Positioned(
-                  bottom: -40,
+                  top: 16,
+                  right: 16,
                   child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundImage: AssetImage('assets/images/user_profile.jpeg'),
+                    backgroundColor: Colors.grey,
+                    child: IconButton(
+                      icon: Icon(Icons.camera_alt, color: Colors.black54),
+                      onPressed: (){}//_changeCoverPhoto,
                     ),
                   ),
                 ),
+
+                // Profile picture
+                Positioned(
+                  bottom: -60,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 80,
+                        backgroundColor: Colors.blue,
+                        child: CircleAvatar(
+                          radius: 75,
+                          backgroundImage: AssetImage('assets/images/user_profile.jpeg'), // Replace with userData['profileUrl']
+                        ),
+                      ),
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.grey,
+                        child: IconButton(
+                          icon: Icon(Icons.camera_alt, size: 24, color: Colors.black54),
+                          onPressed: (){}//_changeProfilePhoto,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               ],
             ),
-            SizedBox(height: 50),
+            SizedBox(height: 80),
             userData == null
                 ? Container(
               padding: EdgeInsets.all(20),
@@ -139,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       context,
                       MaterialPageRoute(builder: (context) => EditProfileScreen()),
                     );
-                    _fetchUserData(); // Refresh profile data after returning
+                    _loadUserData(); // Refresh profile data after returning
                   },
                   icon: Icon(Icons.edit),
                   label: Text("Edit Profile"),
@@ -149,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => PostContentScreen()),
+                      MaterialPageRoute(builder: (context) => CreatePostScreen()),
                     );
                   },
                   icon: Icon(Icons.add_a_photo),
@@ -160,15 +177,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             SizedBox(height: 20),
             Text("Your Posts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            TextButton.icon(
-              onPressed: () => _showLogoutDialog(context),
-              icon: Icon(Icons.logout, color: Colors.red),
-              label: Text("Logout", style: TextStyle(color: Colors.red)),
-            ),
+            SizedBox(height: 10),
+            // StreamBuilder<QuerySnapshot>(
+            //   stream: _fetchPosts(),
+            //   builder: (context, snapshot) {
+            //     if (snapshot.connectionState == ConnectionState.waiting) {
+            //       return CircularProgressIndicator();
+            //     } else if (snapshot.hasError) {
+            //       return Text('Error: ${snapshot.error}');
+            //     } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            //       return Padding(
+            //         padding: const EdgeInsets.symmetric(vertical: 20),
+            //         child: Text("You haven't posted anything yet."),
+            //       );
+            //     }
+            //
+            //     final posts = snapshot.data!.docs;
+            //     return ListView.builder(
+            //       physics: NeverScrollableScrollPhysics(), // prevent nested scrolling issues
+            //       shrinkWrap: true,
+            //       itemCount: posts.length,
+            //       itemBuilder: (context, index) {
+            //         return PostCard(
+            //           postDoc: posts[index],
+            //           currentUserId: _auth.currentUser!.uid,
+            //         );
+            //       },
+            //     );
+            //   },
+            // ),
+
+            //logout button
           ],
         ),
       ),
+      bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 2),
     );
   }
 
@@ -237,7 +280,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () async {
               String newBio = bioController.text.trim();
               if (newBio.isNotEmpty) {
-                await _updateBio(newBio);  // Update bio in Firestore
+                final data = await _userService.updateBio(newBio);  // Update bio in Firestore
+                setState(() {
+                  userData = data;
+                });
+
                 Navigator.pop(context);  // Close dialog
               }
             },
@@ -262,6 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () {
+              _auth.signOut();
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -275,3 +323,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+

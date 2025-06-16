@@ -40,9 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login Successful!")),
       );
-      Navigator.pushReplacement(
+      Navigator.pushNamed(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        "/home",
       );
     } catch (e) {
       if (e is FirebaseAuthException) {
@@ -135,9 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
             Text("Don't have an account?"),
             TextButton(
               onPressed: () {
-                Navigator.push(
+                Navigator.pushNamed(
                   context,
-                  MaterialPageRoute(builder: (context) => SignUpScreen()),
+                  "/signup",
                 );
               },
               child: Text("Sign Up", style: TextStyle(color: Colors.blue)),

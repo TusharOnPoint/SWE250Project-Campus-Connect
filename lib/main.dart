@@ -1,10 +1,13 @@
+import 'package:campus_connect/services/router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/welcome_screen.dart';
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: FirebaseOptions(
@@ -14,6 +17,8 @@ Future main() async {
         projectId: "campusconnect-a1399",
       ),
     );
+  }else {
+    await Firebase.initializeApp();
   }
   runApp(MyApp());
 }
@@ -23,8 +28,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Campus Connect',
+      initialRoute: '/',
+      onGenerateRoute: AppRouter.generateRoute,
       theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Roboto'),
-      home: WelcomeScreen(),
+      //home: WelcomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

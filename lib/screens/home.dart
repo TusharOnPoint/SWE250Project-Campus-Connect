@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../widgets/widgetBuilder.dart';
 import 'profile.dart';
 import 'groups.dart';
 import 'pages.dart';
 import 'notifications.dart';
-import 'massage.dart';
+import 'messages.dart';
 import 'explore.dart';
 import 'add_friend.dart';
 import 'universities.dart'; // Import UniversitiesScreen
@@ -73,32 +74,7 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: _buildPostsList(context),
-      bottomNavigationBar: _buildBottomNavBar(context),
-    );
-  }
-
-  Widget _buildBottomNavBar(BuildContext context) {
-    return BottomNavigationBar(
-      items: [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
-      onTap: (index) {
-        if (index == 0) {
-          // Do nothing as it's the Home screen
-        } else if (index == 1) {  // Explore Icon Index
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ExploreScreen()),  // Navigate to ExploreScreen
-          );
-        } else if (index == 2) {  // Profile Icon Index
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ProfileScreen()),
-          );
-        }
-      },
+      bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 0),
     );
   }
 

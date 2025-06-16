@@ -1,117 +1,146 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
-class PostContentScreen extends StatefulWidget {
+import '../services/coudinary_services.dart';
+
+class CreatePostScreen extends StatefulWidget {
+  const CreatePostScreen({super.key});
+
   @override
-  _PostContentScreenState createState() => _PostContentScreenState();
+  State<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
-class _PostContentScreenState extends State<PostContentScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _textController = TextEditingController();
-  dynamic _mediaFile; // File for mobile, Uint8List for web
-  String? _mediaType;
-  bool isLoading = false;
+  FilePickerResult? _selectedFile;
+  String? _fileType; // "image" or "video"
+  bool _isLoading = false;
 
   Future<void> _pickMedia() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.media);
-      if (result != null) {
-        setState(() {
-          _mediaType = result.files.single.extension == 'mp4' ? 'video' : 'image';
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'png', 'jpeg', 'mp4', 'mov'],
+    );
 
-          if (kIsWeb) {
-            _mediaFile = result.files.single.bytes; // Use Uint8List for web
-          } else {
-            _mediaFile = File(result.files.single.path!); // Use File for mobile
-          }
-        });
-      }
-    } catch (e) {
-      print("Error picking media: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error picking media')));
+    if (result != null && result.files.single.path != null) {
+      final ext = result.files.single.extension!;
+      setState(() {
+        _selectedFile = result;
+        _fileType = ['mp4', 'mov'].contains(ext.toLowerCase()) ? 'video' : 'image';
+      });
     }
   }
 
-  Future<void> _uploadPost() async {
-    if (_textController.text.isEmpty && _mediaFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please add content or media')));
-      return;
-    }
+  Future<void> _createPost() async {
+    if (_textController.text.trim().isEmpty && _selectedFile == null) return;
 
-    setState(() => isLoading = true);
+    setState(() => _isLoading = true);
 
-    User? user = _auth.currentUser;
-    String? mediaMetadata;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    try {
-      if (_mediaFile != null) {
-        mediaMetadata = "path/to/media/${user!.uid}/${DateTime.now().millisecondsSinceEpoch}.${_mediaType == 'video' ? 'mp4' : 'jpg'}";
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final userData = userDoc.data() ?? {};
+
+    String mediaUrl = '';
+    if (_selectedFile != null && _fileType != null) {
+      final uploadedUrl = await uploadToCloudinary(_selectedFile!, _fileType!);
+      if (uploadedUrl != null) {
+        mediaUrl = uploadedUrl;
+
       }
-
-      await _firestore.collection('posts').add({
-        'userId': user?.uid,
-        'text': _textController.text,
-        'mediaMetadata': mediaMetadata,
-        'mediaType': _mediaType,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      setState(() {
-        isLoading = false;
-        _textController.clear();
-        _mediaFile = null;
-        _mediaType = null;
-      });
-      Navigator.pop(context);
-    } catch (e) {
-      setState(() => isLoading = false);
-      print("Error uploading post: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error uploading post')));
     }
+
+    await FirebaseFirestore.instance.collection('posts').add({
+      'authorId': user.uid,
+      'authorName': userData['username'] ?? 'Anonymous',
+      'authorImageUrl': userData['profileImage'] ?? '',
+      'text': _textController.text.trim(),
+      'mediaUrl': mediaUrl,
+      'mediaType': _fileType ?? '', // "image" or "video"
+      'timestamp': FieldValue.serverTimestamp(),
+      'likes': [],
+    });
+
+    _textController.clear();
+    setState(() {
+      _selectedFile = null;
+      _fileType = null;
+      _isLoading = false;
+    });
+
+    Navigator.pop(context);
+  }
+
+  Widget _buildMediaPreview() {
+    if (_selectedFile == null) return const SizedBox();
+
+    if (_fileType == 'image') {
+      print(_selectedFile?.files.single.path);
+      return Image.network(_selectedFile!.files.single.path!);
+    } else if (_fileType == 'video') {
+      return const Text("📹 Video selected");
+    }
+    return const SizedBox();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Create Post")),
+      appBar: AppBar(
+        title: const Text('Create Post'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: _isLoading ? null : _createPost,
+          )
+        ],
+      ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _textController,
-              decoration: InputDecoration(labelText: "Write something..."),
-            ),
-            SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _pickMedia,
-              icon: Icon(Icons.attach_file),
-              label: Text("Pick File"),
-            ),
-            if (_mediaFile != null)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: _mediaType == 'image'
-                    ? kIsWeb
-                    ? Image.memory(_mediaFile, height: 200) // Use Image.memory for web
-                    : Image.file(_mediaFile, height: 200) // Use Image.file for mobile
-                    : Icon(Icons.video_file, size: 100),
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: _textController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  hintText: 'What’s on your mind?',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            SizedBox(height: 20),
-            isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: _uploadPost,
-              child: Text("Post"),
-            ),
-          ],
-        ),
+              const SizedBox(height: 12),
+              _buildMediaPreview(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.attach_file),
+                    label: const Text('Add Image/Video'),
+                    onPressed: _pickMedia,
+                  ),
+                  const Spacer(),
+                  if (_selectedFile != null)
+                    IconButton(
+                      icon: const Icon(Icons.cancel, color: Colors.red),
+                      onPressed: () => setState(() {
+                        _selectedFile = null;
+                        _fileType = null;
+                      }),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              if (_isLoading) const CircularProgressIndicator(),
+            ],
+          ),
+        )
       ),
     );
   }

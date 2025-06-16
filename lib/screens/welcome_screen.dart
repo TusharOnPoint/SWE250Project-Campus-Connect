@@ -1,3 +1,4 @@
+import 'package:campus_connect/widgets/custom_button.dart';
 import 'package:flutter/material.dart';
 import 'login.dart';
 class WelcomeScreen extends StatelessWidget {
@@ -26,24 +27,12 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.blue,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  textStyle: TextStyle(fontSize: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text("Get Started"),
-              ),
+              CustomButton(text: "Get Started", onPressed: (){
+                Navigator.pushNamed(
+                  context,
+                  '/check',
+                );
+              }),
             ],
           ),
         ),
