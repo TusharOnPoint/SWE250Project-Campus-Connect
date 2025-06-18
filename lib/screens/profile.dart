@@ -1,8 +1,10 @@
 import 'package:campus_connect/services/user_sevice.dart';
 import 'package:campus_connect/widgets/widgetBuilder.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/coudinary_services.dart';
 import '../widgets/postCard.dart';
 import 'edit_profile.dart';
 import 'login.dart';
@@ -43,6 +45,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .snapshots();
   }
 
+  Future<void> _updatePhoto(String type) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+      allowMultiple: false,
+      //allowedExtensions: ['jpg', 'jpeg', 'png'],
+    );
+
+    if (result == null || result.files.single.path == null) return;
+
+    String? uploadedUrl = await uploadToCloudinary(result, 'image');
+    if (uploadedUrl == null) return;
+
+    String field = type == 'profile' ? 'profileImage' : 'coverImage';
+
+    await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
+      field: uploadedUrl,
+    });
+
+    _loadUserData(); // Refresh UI
+  }
+
   @override
   Widget build(BuildContext context) {
     //_fetchUserData();
@@ -73,7 +97,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 200,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('assets/images/cover_photo.jpg'),
+                      image: userData?['coverImage'] != null
+                          ? NetworkImage(userData!['coverImage'])
+                          : AssetImage('assets/images/cover_photo.jpg') as ImageProvider,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -84,10 +110,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   top: 16,
                   right: 16,
                   child: CircleAvatar(
+                    radius: 22,
                     backgroundColor: Colors.grey,
                     child: IconButton(
-                      icon: Icon(Icons.camera_alt, color: Colors.black54),
-                      onPressed: (){}//_changeCoverPhoto,
+                      icon: Icon(Icons.camera_alt, size: 24, color: Colors.black54),
+                      onPressed: () => _updatePhoto('cover'),
                     ),
                   ),
                 ),
@@ -96,28 +123,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Positioned(
                   bottom: -60,
                   child: Stack(
-                    alignment: Alignment.bottomRight,
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topLeft,
                     children: [
                       CircleAvatar(
                         radius: 80,
                         backgroundColor: Colors.blue,
                         child: CircleAvatar(
                           radius: 75,
-                          backgroundImage: AssetImage('assets/images/user_profile.jpeg'), // Replace with userData['profileUrl']
+                          backgroundImage: userData?['profileImage'] != null
+                              ? NetworkImage(userData!['profileImage'])
+                              : AssetImage('assets/images/user_profile.jpeg') as ImageProvider,
                         ),
                       ),
+
+                      // profile picture edit button
                       CircleAvatar(
                         radius: 22,
                         backgroundColor: Colors.grey,
                         child: IconButton(
                           icon: Icon(Icons.camera_alt, size: 24, color: Colors.black54),
-                          onPressed: (){}//_changeProfilePhoto,
+                          onPressed: () => _updatePhoto('profile'),
                         ),
                       ),
-                    ],
-                  ),
-                ),
 
+
+                        ],
+                      ),
+                ),
               ],
             ),
             SizedBox(height: 80),
@@ -178,34 +211,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(height: 20),
             Text("Your Posts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
-            // StreamBuilder<QuerySnapshot>(
-            //   stream: _fetchPosts(),
-            //   builder: (context, snapshot) {
-            //     if (snapshot.connectionState == ConnectionState.waiting) {
-            //       return CircularProgressIndicator();
-            //     } else if (snapshot.hasError) {
-            //       return Text('Error: ${snapshot.error}');
-            //     } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            //       return Padding(
-            //         padding: const EdgeInsets.symmetric(vertical: 20),
-            //         child: Text("You haven't posted anything yet."),
-            //       );
-            //     }
-            //
-            //     final posts = snapshot.data!.docs;
-            //     return ListView.builder(
-            //       physics: NeverScrollableScrollPhysics(), // prevent nested scrolling issues
-            //       shrinkWrap: true,
-            //       itemCount: posts.length,
-            //       itemBuilder: (context, index) {
-            //         return PostCard(
-            //           postDoc: posts[index],
-            //           currentUserId: _auth.currentUser!.uid,
-            //         );
-            //       },
-            //     );
-            //   },
-            // ),
+            StreamBuilder<QuerySnapshot>(
+              stream: _fetchPosts(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text("You haven't posted anything yet."),
+                  );
+                }
+
+                final posts = snapshot.data!.docs;
+                return ListView.builder(
+                  physics: NeverScrollableScrollPhysics(), // prevent nested scrolling issues
+                  shrinkWrap: true,
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    return PostCard(
+                      postDoc: posts[index],
+                      currentUserId: _auth.currentUser!.uid,
+                    );
+                  },
+                );
+              },
+            ),
 
             //logout button
           ],

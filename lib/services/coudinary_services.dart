@@ -32,11 +32,11 @@ Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fi
 
   request.files.add(multiPartFile);
   request.fields["upload_preset"] = "campus_connect_tushar_sajib";
-  request.fields["resource_type"] = "raw";
+  //request.fields["resource_type"] = "raw";
 
   var response = await request.send();
   var responseBody = await response.stream.bytesToString();
-  print(responseBody);
+  print('Cloudinary response: $responseBody');
   if(response.statusCode == 200){
     var responseJson = jsonDecode(responseBody);
     print("upload successful");

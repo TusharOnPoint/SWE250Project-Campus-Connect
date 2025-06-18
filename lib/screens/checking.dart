@@ -21,14 +21,27 @@ class RootScreen extends StatelessWidget {
           );
         }
 
-        // User is logged in
+        // If user is logged in
         if (snapshot.hasData) {
-          print("Logged in already");
-          return HomeScreen();
+          User? user = snapshot.data;
+
+          // 🔄 Refresh the user to get latest verification status
+          user?.reload();
+          user = FirebaseAuth.instance.currentUser;
+
+          if (user != null && user.emailVerified) {
+            print("✅ Logged in and email verified");
+            return HomeScreen();
+          } else {
+            print("❌ Email not verified");
+            FirebaseAuth.instance.signOut();
+            return LoginScreen();
+          }
         }
 
-        // User is NOT logged in
-        print("not Logged in already");
+        // Not logged in
+        print("❌ Not logged in");
+        FirebaseAuth.instance.signOut();
         return LoginScreen();
       },
     );

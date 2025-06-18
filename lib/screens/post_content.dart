@@ -25,6 +25,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
       type: FileType.custom,
+      withData: true,
       allowedExtensions: ['jpg', 'png', 'jpeg', 'mp4', 'mov'],
     );
 
@@ -83,7 +84,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     if (_fileType == 'image') {
       print(_selectedFile?.files.single.path);
-      return Image.network(_selectedFile!.files.single.path!);
+      return Image.file(File(_selectedFile!.files.single.path!));
     } else if (_fileType == 'video') {
       return const Text("📹 Video selected");
     }

@@ -35,21 +35,73 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      // Attempt to sign in the user
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Successful!")),
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
-      Navigator.pushNamed(
-        context,
-        "/home",
-      );
+
+      User? user = userCredential.user;
+
+      if (user != null) {
+        if (user.emailVerified) {
+          // Email is verified
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Login Successful!")),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen()),
+          );
+        } else {
+          // Email not verified — Show dialog
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text("Email Not Verified"),
+                content: Text(
+                  "Your email is not verified. Please verify it to continue.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        await user.sendEmailVerification();
+                        Navigator.pop(context); // Close dialog
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Verification email sent. Check your inbox."),
+                          ),
+                        );
+                      } catch (e) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Failed to send verification email.${e.toString()}"),
+                          ),
+                        );
+                      }
+                    },
+                    child: Text("Verify Email"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      _auth.signOut();
+                      Navigator.pop(context);
+                    },
+                    child: Text("Cancel"),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      }
     } catch (e) {
       if (e is FirebaseAuthException) {
         debugPrint("Firebase Auth Error Code: ${e.code}, Message: ${e.message}");
 
         setState(() {
-          // Display a single generic error message for any error
           _errorMessage = "If you're new, SignUp or Did you forget your password?";
         });
 
@@ -67,8 +119,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Login"), backgroundColor: Colors.blue),
-      body: Padding(
+      appBar: AppBar(
+        title: Text("Login With SUST Email"),
+        backgroundColor: Colors.blue,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushNamed(context, "/");
+          },
+        ),
+      ),
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -81,16 +143,32 @@ class _LoginScreenState extends State<LoginScreen> {
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: "Email",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 20),
             TextField(
               controller: _passwordController,
               obscureText: _obscureText,
               decoration: InputDecoration(
                 labelText: "Password",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
                   onPressed: () {
@@ -101,9 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 20),
 
-            // Align "Forgot Password?" button to the right
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -113,13 +190,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
                   );
                 },
-                child: Text("Forgot Password?", style: TextStyle(color: Colors.blue)),
+                child: Text("Forgot Password?",
+                style: TextStyle(color: Colors.blue)),
               ),
             ),
 
             SizedBox(height: 10),
 
-            // Login Button
             ElevatedButton(
               onPressed: _login,
               child: Text("Login"),
@@ -131,14 +208,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
             SizedBox(height: 10),
 
-            // Sign Up Navigation
             Text("Don't have an account?"),
             TextButton(
               onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  "/signup",
-                );
+                Navigator.pushNamed(context, "/signup");
               },
               child: Text("Sign Up", style: TextStyle(color: Colors.blue)),
             ),

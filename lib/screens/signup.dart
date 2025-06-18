@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-//import 'package:campus_connect/services/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:campus_connect/screens/login.dart';
 import 'home.dart';
 
@@ -13,8 +12,8 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  //final FirebaseAuthService _auth = FirebaseAuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -32,7 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").hasMatch(email);
+    return RegExp(r"^[a-zA-Z0-9._%+-]+@student\.sust\.edu$").hasMatch(email);
   }
 
   bool _isValidPassword(String password) {
@@ -53,7 +52,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (!_isValidEmail(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Enter a valid email address")),
+        SnackBar(content: Text("Only SUST email addresses are allowed")),
       );
       return;
     }
@@ -70,7 +69,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      List<String> signInMethods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
+      List<String> signInMethods = await _auth.fetchSignInMethodsForEmail(email);
 
       if (signInMethods.isNotEmpty) {
         setState(() {
@@ -81,7 +80,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SnackBar(content: Text("Already Signed Up. Log In Now")),
         );
 
-        await Future.delayed(Duration(seconds: 1)); // Short delay to show message
+        await Future.delayed(Duration(seconds: 1));
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -92,7 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential =  await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -100,6 +99,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
+        // 🔐 Send email verification
+        await user.sendEmailVerification(); // ✅ <--- Added
+
         await _firestore.collection("users").doc(user.uid).set({
           "username": username,
           "email": email,
@@ -111,18 +113,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _isSigningUp = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Signup Successful! Redirecting...")),
+        // 📨 Notify user to check email
+        showDialog( // ✅ <--- Added
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              title: Text("Verify Your Email"),
+              content: Text("A verification link has been sent to your email. Please verify to continue."),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    _auth.signOut();
+                    Navigator.popAndPushNamed(context, "/login");
+                  },
+                  child: Text("Go to Login"),
+                )
+              ],
+            );
+          },
         );
-
-        await Future.delayed(Duration(milliseconds: 500));
-
-        if (mounted) {
-          Navigator.pushNamed(
-            context,
-            "/home",
-          );
-        }
       } else {
         setState(() {
           _isSigningUp = false;
@@ -176,8 +186,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Sign Up"), backgroundColor: Colors.blue),
-      body: Padding(
+      appBar: AppBar(
+        title: Text("Sign Up With SUST Email"),
+        backgroundColor: Colors.blue,
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -190,7 +204,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: "Username",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
               ),
             ),
             SizedBox(height: 10),
@@ -198,7 +220,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: "Email",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
               ),
               keyboardType: TextInputType.emailAddress,
             ),
@@ -208,7 +238,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
               obscureText: _obscureText,
               decoration: InputDecoration(
                 labelText: "Password",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
                   onPressed: () {

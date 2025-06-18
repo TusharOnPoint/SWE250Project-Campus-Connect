@@ -55,16 +55,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Edit Profile")),
-      body: Padding(
+      appBar: AppBar(
+        title: Text("Edit Profile"),
+        backgroundColor: Colors.white30,
+        elevation: 10,
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(controller: _nameController, decoration: InputDecoration(labelText: "Name")),
-            TextField(controller: _universityController, decoration: InputDecoration(labelText: "University")),
-            TextField(controller: _workplaceController, decoration: InputDecoration(labelText: "Workplace")),
-            TextField(controller: _hobbiesController, decoration: InputDecoration(labelText: "Hobbies")),
-            TextField(controller: _achievementsController, decoration: InputDecoration(labelText: "Achievements")),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: "Name",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: _universityController,
+              decoration: InputDecoration(
+                labelText: "University",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: _workplaceController,
+              decoration: InputDecoration(
+                labelText: "Workplace",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: _hobbiesController,
+              decoration: InputDecoration(
+                labelText: "Hobbies",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: _achievementsController,
+              decoration: InputDecoration(
+                labelText: "Achievements",
+                border: OutlineInputBorder(),
+              ),
+            ),
             SizedBox(height: 20),
             ElevatedButton(onPressed: _updateProfile, child: Text("Save Changes")),
           ],
