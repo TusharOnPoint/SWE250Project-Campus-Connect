@@ -40,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Stream<QuerySnapshot> _fetchPosts() {
     return _firestore
         .collection('posts')
-        .where('authorId', isEqualTo: _auth.currentUser?.uid)
+        //.where('authorId', isEqualTo: _auth.currentUser?.uid)
         //.orderBy('timestamp', descending: true)
         .snapshots();
   }

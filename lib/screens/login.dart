@@ -44,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (user != null) {
         if (user.emailVerified) {
-          // Email is verified
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Login Successful!")),
           );
@@ -53,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => HomeScreen()),
           );
         } else {
-          // Email not verified — Show dialog
           showDialog(
             context: context,
             builder: (context) {
