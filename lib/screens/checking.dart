@@ -1,49 +1,57 @@
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'home.dart';
-import 'login.dart';
 
-class RootScreen extends StatelessWidget {
+class RootScreen extends StatefulWidget {
+  @override
+  _RootScreenState createState() => _RootScreenState();
+}
+
+class _RootScreenState extends State<RootScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _handleAuthState();
+  }
+
+  void _handleAuthState() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      print("❌ Not logged in");
+      await FirebaseAuth.instance.signOut();
+      _navigateTo('/login');
+    } else {
+      await user.reload();
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+
+      if (refreshedUser != null && refreshedUser.emailVerified) {
+        print("✅ Logged in and email verified");
+        _navigateTo('/home');
+      } else {
+        print("❌ Email not verified");
+        //await FirebaseAuth.instance.signOut();
+        _navigateTo('/login');
+        FirebaseAuth.instance.signOut();
+      }
+    }
+
+  }
+
+  void _navigateTo(String routeName) {
+    print("navigating to ${routeName}");
+    Navigator.of(context).pushReplacementNamed(routeName);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Waiting for Firebase to check auth status
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-            appBar: AppBar(
-              centerTitle: true,
-              title: Text("Campus Connect"),
-              backgroundColor: Colors.blue,
-          ),
-          );
-        }
-
-        // If user is logged in
-        if (snapshot.hasData) {
-          User? user = snapshot.data;
-
-          // 🔄 Refresh the user to get latest verification status
-          user?.reload();
-          user = FirebaseAuth.instance.currentUser;
-
-          if (user != null && user.emailVerified) {
-            print("✅ Logged in and email verified");
-            return HomeScreen();
-          } else {
-            print("❌ Email not verified");
-            FirebaseAuth.instance.signOut();
-            return LoginScreen();
-          }
-        }
-
-        // Not logged in
-        print("❌ Not logged in");
-        FirebaseAuth.instance.signOut();
-        return LoginScreen();
-      },
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Campus Connect"),
+        centerTitle: true,
+        backgroundColor: Colors.blue,
+      ),
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

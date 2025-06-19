@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     image: DecorationImage(
                       image: userData?['coverImage'] != null
                           ? NetworkImage(userData!['coverImage'])
-                          : AssetImage('assets/images/cover_photo.jpg') as ImageProvider,
+                          : AssetImage('assets/images/cover_placeholder.jpg') as ImageProvider,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           radius: 75,
                           backgroundImage: userData?['profileImage'] != null
                               ? NetworkImage(userData!['profileImage'])
-                              : AssetImage('assets/images/user_profile.jpeg') as ImageProvider,
+                              : AssetImage('assets/images/user_placeholder.jpg') as ImageProvider,
                         ),
                       ),
 

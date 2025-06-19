@@ -8,7 +8,8 @@ class UserService {
   Future<Map<String, dynamic>?> fetchUserData() async {
     User? user = _auth.currentUser;
     if (user != null) {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
         return userDoc.data() as Map<String, dynamic>;
       }
@@ -23,10 +24,23 @@ class UserService {
         await _firestore.collection('users').doc(user.uid).update({
           'bio': newBio,
         });
-        return fetchUserData();  // Refresh data after update
+        return fetchUserData(); // Refresh data after update
       } catch (e) {
         print('Error updating bio: $e');
       }
     }
+  }
+
+  static Future<Map<String, dynamic>?> getUserDataByUid(String uid) async {
+    try {
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        return userDoc.data() as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print('Error fetching user data for uid $uid: $e');
+    }
+    return null;
   }
 }
