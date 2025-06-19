@@ -1,3 +1,6 @@
+import 'package:campus_connect/widgets/postCard.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../widgets/widgetBuilder.dart';
@@ -11,6 +14,7 @@ import 'add_friend.dart';
 import 'universities.dart'; // Import UniversitiesScreen
 
 class HomeScreen extends StatelessWidget {
+  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,190 +77,26 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: _buildPostsList(context),
-      bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 0),
-    );
-  }
-
-  Widget _buildPostsList(BuildContext context) {
-    return ListView(
-      children: [
-        _buildTextPost('Alice Johnson', '1 hour ago', 'Excited for the upcoming campus event! Who else is joining?'),
-        _buildPhotoPost(context, 'Michael Smith', '3 hours ago', 'Captured a beautiful sunset on campus today!', 'assets/images/sunset.jpg'),
-        _buildPhotoPost(context, 'Emily Davis', '5 hours ago', 'Loving the new library setup!', 'assets/images/library.jpeg'),
-        VideoPost(
-          userName: 'Daniel Brown',
-          time: '6 hours ago',
-          content: 'Beautiful SUST at the start of spring!',
-          videoPath: 'assets/videos/boshonto.mp4',
-          postActions: _buildPostActions(), // Pass post actions
-        ),
-        _buildTextPost('Sophia Wilson', '8 hours ago', 'Finally submitted my final project! Time to relax.'),
-      ],
-    );
-  }
-
-  Widget _buildTextPost(String userName, String time, String content) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
-            ),
-            title: Text(userName),
-            subtitle: Text(time),
-          ),
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(content),
-          ),
-          _buildPostActions(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhotoPost(BuildContext context, String userName, String time, String content, String imagePath) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
-            ),
-            title: Text(userName),
-            subtitle: Text(time),
-          ),
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(content),
-          ),
-          Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.width * 0.6,
-            ),
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.cover,
-            ),
-          ),
-          _buildPostActions(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPostActions() {
-    return ButtonBar(
-      alignment: MainAxisAlignment.spaceAround,
-      children: [
-        IconButton(
-          icon: Icon(Icons.thumb_up_alt_outlined),
-          onPressed: () {
-            print('Liked');
-          },
-        ),
-        IconButton(
-          icon: Icon(Icons.comment_outlined),
-          onPressed: () {
-            print('Comment');
-          },
-        ),
-        IconButton(
-          icon: Icon(Icons.share_outlined),
-          onPressed: () {
-            print('Shared');
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class VideoPost extends StatefulWidget {
-  final String userName;
-  final String time;
-  final String content;
-  final String videoPath;
-  final Widget postActions; // Pass postActions from HomeScreen
-
-  VideoPost({required this.userName, required this.time, required this.content, required this.videoPath, required this.postActions});
-
-  @override
-  _VideoPostState createState() => _VideoPostState();
-}
-
-class _VideoPostState extends State<VideoPost> {
-  late VideoPlayerController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.asset(widget.videoPath)
-      ..initialize().then((_) {
-        setState(() {}); // Refresh UI when video loads
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/images/user_placeholder.jpg'),
-            ),
-            title: Text(widget.userName),
-            subtitle: Text(widget.time),
-          ),
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(widget.content),
-          ),
-          _controller.value.isInitialized
-              ? Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.width * 0.6,
-            ),
-            child: AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
-            ),
-          )
-              : Container(
-            height: 200,
-            color: Colors.black12,
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          IconButton(
-            icon: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
-            onPressed: () {
-              setState(() {
-                _controller.value.isPlaying ? _controller.pause() : _controller.play();
-              });
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance.collection('posts').orderBy('timestamp', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if(snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if(!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text("No posts available"));
+          }
+          final snap = snapshot.data;
+          return ListView.builder(
+            itemCount: snap!.docs.length,
+            itemBuilder: (context, index) {
+              final post = snap.docs[index];
+              return PostCard(postDoc: post, currentUserId: currentUserId);
             },
-          ),
-          widget.postActions, // Use the passed postActions
-        ],
+          );
+        },
       ),
+      bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 0),
     );
   }
 }

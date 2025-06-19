@@ -2,6 +2,7 @@
 import 'package:campus_connect/screens/checking.dart';
 import 'package:campus_connect/screens/login.dart';
 import 'package:campus_connect/screens/signup.dart';
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:campus_connect/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 

@@ -40,16 +40,40 @@ class _PostCardState extends State<PostCard> {
     super.dispose();
   }
 
-  void toggleLike() async {
-    final postRef = widget.postDoc.reference;
-    setState(() => isLiked = !isLiked);
+  void _toggleLike() async {
+  final postRef = widget.postDoc.reference;
+  final wasLiked = isLiked;
+  final likesList = List<String>.from(postData['likes']); // Make a copy
 
+  // Optimistic UI update
+  setState(() {
+    isLiked = !wasLiked;
+    if (!wasLiked) {
+      postData['likes'].add(widget.currentUserId);
+    } else {
+      postData['likes'].remove(widget.currentUserId);
+    }
+  });
+
+  try {
     await postRef.update({
-      'likes': isLiked
+      'likes': !wasLiked
           ? FieldValue.arrayUnion([widget.currentUserId])
           : FieldValue.arrayRemove([widget.currentUserId])
     });
+  } catch (e) {
+    
+    setState(() {
+      isLiked = wasLiked;
+      postData['likes'] = likesList;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to update like. Please try again.')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +90,7 @@ class _PostCardState extends State<PostCard> {
           // Author Info
           ListTile(
             leading: CircleAvatar(
-              backgroundImage: NetworkImage(postData['authorImageUrl'] ?? ''),
+              backgroundImage: NetworkImage(postData['authorImageUrl'] ?? 'https://th.bing.com/th/id/OIP.6UhgwprABi3-dz8Qs85FvwHaHa?rs=1&pid=ImgDetMain'),
             ),
             title: Text(postData['authorName'] ?? 'Unknown'),
             subtitle: timestamp != null
@@ -130,13 +154,14 @@ class _PostCardState extends State<PostCard> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
                   icon: Icon(
                     isLiked ? Icons.favorite : Icons.favorite_border,
                     color: isLiked ? Colors.red : Colors.grey,
                   ),
-                  onPressed: toggleLike,
+                  onPressed: _toggleLike,
                 ),
                 Text('$likeCount'),
                 const SizedBox(width: 16),

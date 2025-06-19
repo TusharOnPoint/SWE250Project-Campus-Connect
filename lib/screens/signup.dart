@@ -83,9 +83,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await Future.delayed(Duration(seconds: 1));
 
         if (mounted) {
-          Navigator.pushReplacement(
+          Navigator.pushReplacementNamed(
             context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
+            'login'
           );
         }
         return;

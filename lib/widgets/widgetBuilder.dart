@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -35,4 +36,68 @@ class CustomWidgetBuilder {
       },
     );
   }
+
+  void showEmailVerificationDialog (BuildContext context){
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text("Email Not Verified"),
+            content: Text(
+              "Your email is not verified. Please verify it to continue.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  try {
+                    User? user = FirebaseAuth.instance.currentUser;
+
+                    await user?.reload(); // Refresh user info
+                    if (user != null && !user.emailVerified) {
+                      try {
+                        await user.sendEmailVerification();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Verification email sent. Check your inbox.",
+                          ),
+                        ),
+                      );
+                      Navigator.pushNamed(context, '/login'); // Close dialog
+                      } catch (e){
+                        print("Error sending verification email: ${e.toString()}");
+                        Navigator.pop(context); // Close dialog
+                      }
+                        
+                    }
+                    FirebaseAuth.instance.signOut();
+                  } catch (e) {
+                    Navigator.pop(context);
+                    print(
+                      "Failed to send verification email.${e.toString()}",
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Failed to send verification email.${e.toString()}",
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Text("Verify Email"),
+              ),
+              TextButton(
+                onPressed: () {
+                  FirebaseAuth.instance.signOut();
+                  Navigator.pop(context);
+                },
+                child: Text("Cancel"),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  
 }
