@@ -1,6 +1,7 @@
 // lib/router/app_router.dart
 import 'package:campus_connect/screens/checking.dart';
 import 'package:campus_connect/screens/login.dart';
+import 'package:campus_connect/screens/post_detail_screen.dart';
 import 'package:campus_connect/screens/signup.dart';
 import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:campus_connect/screens/welcome_screen.dart';
@@ -46,11 +47,11 @@ class AppRouter {
       // case '/posts':
       //   return MaterialPageRoute(builder: (_) => PostsScreen());
       //
-      // case '/postDetail':
-      //   final args = settings.arguments as Map<String, dynamic>;
-      //   return MaterialPageRoute(
-      //     builder: (_) => PostDetailScreen(postId: args['postId']),
-      //   );
+      case '/postDetail':
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => PostDetailScreen(postDoc: args['postDoc'], currentUserId: args['currentUserId']),
+        );
       //
       // case '/people':
       //   return MaterialPageRoute(builder: (_) => PeopleScreen());
@@ -75,3 +76,4 @@ class AppRouter {
     }
   }
 }
+
