@@ -1,4 +1,5 @@
-// lib/router/app_router.dart
+
+import 'package:campus_connect/screens/add_conversation.dart';
 import 'package:campus_connect/screens/checking.dart';
 import 'package:campus_connect/screens/login.dart';
 import 'package:campus_connect/screens/signup.dart';
@@ -35,6 +36,9 @@ class AppRouter {
 
       case '/messages':
         return MaterialPageRoute(builder: (_) => MessagesScreen());
+
+      case '/addConversation':
+        return MaterialPageRoute(builder: (_) => AddConversationScreen());
 
       // case '/messageDetail':
       //   final args = settings.arguments as Map<String, dynamic>;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'chat_screen.dart';
 
 class FriendListScreen extends StatefulWidget {
   @override
@@ -51,31 +52,45 @@ class _FriendListScreenState extends State<FriendListScreen> {
                   final data = friend.data() as Map<String, dynamic>?;
 
                   return InkWell(
-                    onTap: () {
-
-                    },
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: NetworkImage(data?['profileImage'] ??
-                            'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg'),
+                        backgroundImage: NetworkImage(
+                          data?['profileImage'] ??
+                              'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg',
+                        ),
                       ),
                       title: Text(data?['username'] ?? 'No username'),
                       trailing: PopupMenuButton<String>(
-                        onSelected: (value) {
+                        onSelected: (value) async {
                           if (value == 'unfriend') {
                             _unfriend(friendId, data?['username'] ?? '');
                           } else if (value == 'chat') {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Chat clicked (not implemented).')),
-                            );
+                            try {
+                              final conversationId =
+                              await _getOrCreateConversation(
+                                  currentUser!.uid, friendId);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ChatScreen(
+                                      conversationId: conversationId),
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                    Text('Failed to chat: $e')),
+                              );
+                            }
                           }
                         },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
                             value: 'chat',
                             child: Text('Chat'),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'unfriend',
                             child: Text('Unfriend'),
                           ),
@@ -94,9 +109,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
   Future<List<DocumentSnapshot>> _fetchFriends(List<String> friendIds) async {
     if (friendIds.isEmpty) return [];
-
-    final futures = friendIds.map((id) =>
-        FirebaseFirestore.instance.collection('users').doc(id).get());
+    final futures = friendIds
+        .map((id) => FirebaseFirestore.instance.collection('users').doc(id).get());
     return await Future.wait(futures);
   }
 
@@ -125,5 +139,46 @@ class _FriendListScreenState extends State<FriendListScreen> {
         SnackBar(content: Text('Failed to unfriend: $e')),
       );
     }
+  }
+
+  Future<String> _getOrCreateConversation(String userId1, String userId2) async {
+    final conversationsRef = FirebaseFirestore.instance.collection('conversations');
+
+    // Check for existing private conversation
+    final snapshot = await conversationsRef
+        .where('participants', arrayContains: userId1)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final participants = List<String>.from(data['participants'] ?? []);
+      final type = data['type'] ?? 'private';
+
+      if (participants.contains(userId2) &&
+          participants.length == 2 &&
+          type == 'private') {
+        return doc.id;
+      }
+    }
+
+    // Fetch friend's data
+    final friendDoc =
+    await FirebaseFirestore.instance.collection('users').doc(userId2).get();
+    final friendData = friendDoc.data() as Map<String, dynamic>?;
+
+    // Create a new private conversation
+    final newDoc = conversationsRef.doc();
+    await newDoc.set({
+      'conversationId': newDoc.id,
+      'participants': [userId1, userId2],
+      'type': 'private',
+      'conversationName': friendData?['username'] ?? 'Chat',
+      'conversationProfile': friendData?['profileImage'] ?? '',
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastMessage': '',
+      'lastMessageTime': null,
+    });
+
+    return newDoc.id;
   }
 }
