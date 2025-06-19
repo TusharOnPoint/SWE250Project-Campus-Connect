@@ -54,7 +54,6 @@ class _LoginScreenState extends State<LoginScreen> {
             '/home',
           );
         } else {
-          // Email not verified — Show dialog
           showDialog(
             context: context,
             builder: (context) {
