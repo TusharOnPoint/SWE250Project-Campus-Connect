@@ -2,6 +2,7 @@ import 'package:campus_connect/widgets/postCard.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:campus_connect/widgets/comment_card.dart';
 
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
@@ -64,21 +65,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     return Column(
                       children:
                           comments.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            return ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.person),
-                              ),
-                              title: Text(data['text'] ?? ''),
-                              subtitle:
-                                  data['timestamp'] != null
-                                      ? Text(
-                                        DateFormat.yMMMd().add_jm().format(
-                                          (data['timestamp'] as Timestamp)
-                                              .toDate(),
-                                        ),
-                                      )
-                                      : null,
+                            return CommentCard(
+                              commentDoc: doc,
+                              currentUserId: widget.currentUserId,
+                              postAuthorId: widget.postDoc['authorId'],
                             );
                           }).toList(),
                     );
