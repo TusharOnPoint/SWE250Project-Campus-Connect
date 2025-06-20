@@ -23,7 +23,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return FirebaseFirestore.instance
         .collection('conversations')
         .where('participants', arrayContains: currentUser.uid)
-        .snapshots(); // Removed orderBy
+        .snapshots();
   }
 
   @override

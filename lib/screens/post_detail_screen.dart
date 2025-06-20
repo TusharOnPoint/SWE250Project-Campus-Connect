@@ -47,6 +47,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 PostCard(
                   postDoc: widget.postDoc,
                   currentUserId: widget.currentUserId,
+                  isNavigate: false,
                 ),
                 const Divider(),
                 StreamBuilder<QuerySnapshot>(

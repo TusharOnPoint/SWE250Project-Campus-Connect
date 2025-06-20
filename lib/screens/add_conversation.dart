@@ -52,13 +52,55 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
     Navigator.pop(context);
   }
 
+  Future<void> startPrivateConversation() async {
+    final selectedUserId = selectedUserIds.first;
+
+    final existingConversations = await FirebaseFirestore.instance
+        .collection('conversations')
+        .where('type', isEqualTo: 'private')
+        .where('participants', arrayContains: currentUser.uid)
+        .get();
+
+    for (var doc in existingConversations.docs) {
+      final participants = List<String>.from(doc['participants']);
+      if (participants.contains(selectedUserId) && participants.length == 2) {
+        Navigator.pushNamed(context, '/chat', arguments: doc.id);
+        return;
+      }
+    }
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(selectedUserId).get();
+    final userData = userDoc.data() as Map<String, dynamic>;
+
+    final conversationDoc = FirebaseFirestore.instance.collection('conversations').doc();
+
+    await conversationDoc.set({
+      'conversationId': conversationDoc.id,
+      'conversationName': userData['username'] ?? 'Chat',
+      'conversationProfile': userData.containsKey('profileImage') ? userData['profileImage'] : '',
+      'type': 'private',
+      'participants': [currentUser.uid, selectedUserId],
+      'lastMessage': '',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    });
+
+    Navigator.pushNamed(context, '/chat', arguments: conversationDoc.id);
+  }
+
   Widget buildUserList(List<DocumentSnapshot> users) {
     return ListView(
       children: users.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
         final isSelected = selectedUserIds.contains(doc.id);
+        final username = data['username'] ?? 'Unknown';
+        final profileImage = data.containsKey('profileImage') ? data['profileImage'] : '';
+
         return ListTile(
-          leading: CircleAvatar(backgroundImage: NetworkImage(doc['profileImage'] ?? '')),
-          title: Text(doc['username']),
+          leading: CircleAvatar(
+            backgroundImage: profileImage.isNotEmpty ? NetworkImage(profileImage) : null,
+            child: profileImage.isEmpty ? Icon(Icons.person) : null,
+          ),
+          title: Text(username),
           trailing: Icon(
             isSelected ? Icons.check_box : Icons.check_box_outline_blank,
             color: isSelected ? Colors.blue : null,
@@ -78,7 +120,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Create Group")),
+      appBar: AppBar(title: Text("Create Group or Chat")),
       body: Column(
         children: [
           Padding(
@@ -109,7 +151,15 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
               },
             ),
           ),
-          if (selectedUserIds.length >= 2)
+          if (selectedUserIds.length == 1)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: ElevatedButton(
+                onPressed: startPrivateConversation,
+                child: Text("Start Conversation"),
+              ),
+            )
+          else if (selectedUserIds.length >= 2)
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(

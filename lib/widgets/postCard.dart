@@ -7,11 +7,13 @@ import 'package:video_player/video_player.dart';
 class PostCard extends StatefulWidget {
   final DocumentSnapshot postDoc;
   final String currentUserId;
+  final isNavigate;
 
   const PostCard({
     super.key,
     required this.postDoc,
     required this.currentUserId,
+    this.isNavigate = true,
   });
 
   @override
@@ -180,8 +182,9 @@ class _PostCardState extends State<PostCard> {
                         Text('$likeCount'),
                       ],
                     ),
+                    SizedBox(width: 20,),
                     GestureDetector(
-                      onTap: () {
+                      onTap: widget.isNavigate ?  () {
                         Navigator.pushNamed(
                           context,
                           '/postDetail',
@@ -190,7 +193,7 @@ class _PostCardState extends State<PostCard> {
                             'currentUserId': widget.currentUserId,
                           },
                         );
-                      },
+                      } : () {},
                       child: Row(
                         children: [
                           const Icon(Icons.comment_outlined),
