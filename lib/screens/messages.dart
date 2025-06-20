@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'chat_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   @override
@@ -76,7 +77,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             return Center(child: Text("No conversations match your search."));
           }
 
-          // Separate and sort manually
+          // Separate and sort
           final docsWithTime = <DocumentSnapshot>[];
           final docsWithoutTime = <DocumentSnapshot>[];
 
@@ -114,14 +115,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundImage:
-                  profile.isNotEmpty ? NetworkImage(profile) : null,
+                  backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
                   child: profile.isEmpty ? Icon(Icons.group) : null,
                 ),
                 title: Text(name.isEmpty ? 'Unnamed Conversation' : name),
-                subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
-                onTap: () => Navigator.pushNamed(context, '/chat', arguments: doc.id),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(conversationId: doc.id),
+                    ),
+                  );
+                },
               );
             },
           );
