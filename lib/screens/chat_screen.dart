@@ -19,7 +19,7 @@ class ChatScreen extends StatefulWidget {
   _ChatScreenState createState() => _ChatScreenState();
 }
 
-// Replace these with your Cloudinary details
+// Replace with your Cloudinary details
 const cloudinaryUploadPreset = 'YOUR_UPLOAD_PRESET';
 const cloudinaryCloudName = 'YOUR_CLOUD_NAME';
 
@@ -31,10 +31,10 @@ class _ChatScreenState extends State<ChatScreen> {
   String conversationName = 'Loading...';
   String? profileUrl;
   String conversationType = '';
-  File? selectedImage;       // For mobile
-  XFile? selectedWebImage;   // For web
+  File? selectedImage;
+  XFile? selectedWebImage;
 
-  Map<String, dynamic> userCache = {}; // userId => {username, profileImage}
+  Map<String, dynamic> userCache = {};
 
   @override
   void initState() {
@@ -49,11 +49,24 @@ class _ChatScreenState extends State<ChatScreen> {
         .get();
 
     if (doc.exists) {
-      setState(() {
-        conversationName = doc['conversationName'] ?? 'Chat';
-        profileUrl = doc['conversationProfile'];
-        conversationType = doc['type'] ?? '';
-      });
+      final data = doc.data()!;
+      final participants = List<String>.from(data['participants'] ?? []);
+      conversationType = data['type'] ?? '';
+
+      if (conversationType == 'private') {
+        final otherUserId = participants.firstWhere((id) => id != currentUser.uid);
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+
+        setState(() {
+          conversationName = userDoc['username'] ?? 'Chat';
+          profileUrl = userDoc['profileImage'] ?? '';
+        });
+      } else {
+        setState(() {
+          conversationName = data['conversationName'] ?? 'Group';
+          profileUrl = data['conversationProfile'];
+        });
+      }
     }
   }
 
