@@ -1,4 +1,3 @@
-
 import 'package:campus_connect/screens/add_conversation.dart';
 import 'package:campus_connect/screens/checking.dart';
 import 'package:campus_connect/screens/login.dart';
@@ -11,8 +10,6 @@ import 'package:flutter/material.dart';
 import '../screens/home.dart';
 import '../screens/messages.dart';
 import '../screens/profile.dart';
-
-
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -34,7 +31,9 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => HomeScreen());
 
       case '/profile':
-        return MaterialPageRoute(builder: (_) => ProfileScreen());
+        return MaterialPageRoute(
+          builder: (context) => UserProfileScreen(userId: 'L4F0x6RU95YwuJramI1iDZw2MBf2'),
+        );
 
       case '/messages':
         return MaterialPageRoute(builder: (_) => MessagesScreen());
@@ -54,7 +53,11 @@ class AppRouter {
       case '/postDetail':
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
-          builder: (_) => PostDetailScreen(postDoc: args['postDoc'], currentUserId: args['currentUserId']),
+          builder:
+              (_) => PostDetailScreen(
+                postDoc: args['postDoc'],
+                currentUserId: args['currentUserId'],
+              ),
         );
       //
       // case '/people':
@@ -80,4 +83,3 @@ class AppRouter {
     }
   }
 }
-

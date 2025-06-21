@@ -131,8 +131,9 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
 
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: NetworkImage(user['profileImage'] ??
-                        'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg'),
+                    backgroundImage: user?['profileImage'] != null
+                              ? NetworkImage(user!['profileImage'])
+                              : AssetImage('assets/images/user_placeholder.jpg') as ImageProvider,
                   ),
                   title: Text(user['username'] ?? 'No username'),
                   trailing: isFriend

@@ -18,7 +18,7 @@ class _RootScreenState extends State<RootScreen> {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      print("❌ Not logged in");
+      print("Not logged in");
       await FirebaseAuth.instance.signOut();
       _navigateTo('/login');
     } else {
@@ -26,10 +26,11 @@ class _RootScreenState extends State<RootScreen> {
       final refreshedUser = FirebaseAuth.instance.currentUser;
 
       if (refreshedUser != null && refreshedUser.emailVerified) {
-        print("✅ Logged in and email verified");
+        print("Logged in and email verified");
+        print(user!.uid);
         _navigateTo('/home');
       } else {
-        print("❌ Email not verified");
+        print("Email not verified");
         //await FirebaseAuth.instance.signOut();
         _navigateTo('/login');
         FirebaseAuth.instance.signOut();
