@@ -452,35 +452,53 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Widget _buildRespondButton(String userId, String username) {
-  return PopupMenuButton<String>(
-    onSelected: (value) {
-      if (value == 'accept') {
-        _acceptFriendRequest(userId, username);
-      } else if (value == 'delete') {
-        _cancelReceivedRequest(userId, username);
-      }
-    },
-    itemBuilder: (context) => [
-      PopupMenuItem(
-        value: 'accept',
-        child: Text('Accept'),
-      ),
-      PopupMenuItem(
-        value: 'delete',
-        child: Text('Delete'),
-      ),
-    ],
-    child: ElevatedButton.icon(
-      icon: Icon(Icons.reply),
-      label: Text('Respond'),
-      style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      ),
-      onPressed: () {},
-    ),
-  );
-}
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'accept') {
+          _acceptFriendRequest(userId, username);
+        } else if (value == 'delete') {
+          _cancelReceivedRequest(userId, username);
+        }
+      },
+      itemBuilder:
+          (context) => [
+            PopupMenuItem(value: 'accept', child: Text('Accept')),
+            PopupMenuItem(value: 'delete', child: Text('Delete')),
+          ],
+      child: Builder(
+        builder: (context) {
+          final ButtonStyle defaultStyle = ElevatedButton.styleFrom();
+          final Color foregroundColor =
+              defaultStyle.backgroundColor?.resolve({}) ??
+              Theme.of(context).colorScheme.primary;
+          final Color backgroundColor =
+              defaultStyle.foregroundColor?.resolve({}) ?? Colors.white;
 
+          return Material(
+            color: backgroundColor,
+            elevation: 2,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              splashColor: foregroundColor.withOpacity(0.12),
+              highlightColor: foregroundColor.withOpacity(0.05),
+              //onTap: () {},
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                child: Text(
+                  'Respond',
+                  style: TextStyle(color: foregroundColor),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // friends // delete // accept // add friend // cancel request
