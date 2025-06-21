@@ -52,13 +52,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         stream: getConversationsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: SizedBox(
-                width: 32,
-                height: 32,
-                child: CircularProgressIndicator(),
-              ),
-            );
+            return Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -104,36 +98,90 @@ class _MessagesScreenState extends State<MessagesScreen> {
               final doc = sortedDocs[index];
               final data = doc.data() as Map<String, dynamic>;
 
-              final name = (data['conversationName'] ?? 'Unnamed').toString().trim();
-              final profile = (data['conversationProfile'] ?? '').toString();
+              final conversationType = data['type'] ?? 'group';
               final lastMessage = (data['lastMessage'] ?? '').toString();
               final subtitle = lastMessage.isNotEmpty ? lastMessage : 'No messages yet';
-
               final seen = data.containsKey('seenBy')
                   ? List<String>.from(data['seenBy']).contains(currentUser.uid)
                   : false;
 
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
-                  child: profile.isEmpty ? Icon(Icons.group) : null,
-                ),
-                title: Text(name.isEmpty ? 'Unnamed Conversation' : name),
-                subtitle: Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(conversationId: doc.id),
-                    ),
-                  );
-                },
-              );
+              if (conversationType == 'group') {
+                // Direct rendering for group
+                final name = data['conversationName'] ?? 'Unnamed Group';
+                final profile = data['conversationProfile'] ?? '';
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
+                    child: profile.isEmpty ? Icon(Icons.group) : null,
+                  ),
+                  title: Text(name),
+                  subtitle: Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(conversationId: doc.id),
+                      ),
+                    );
+                  },
+                );
+              } else {
+                // Render private using FutureBuilder to fetch other participant
+                final participantIds = List<String>.from(data['participants']);
+                final otherUserId =
+                participantIds.firstWhere((id) => id != currentUser.uid, orElse: () => '');
+
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
+                  builder: (context, userSnapshot) {
+                    if (userSnapshot.connectionState == ConnectionState.waiting) {
+                      return ListTile(
+                        title: Text("Loading..."),
+                        subtitle: Text("Fetching user info"),
+                      );
+                    }
+
+                    if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                      return ListTile(
+                        title: Text("Unknown user"),
+                        subtitle: Text(subtitle),
+                      );
+                    }
+
+                    final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                    final name = userData['username'] ?? 'Unknown';
+                    final profile = userData['profileImage'] ?? '';
+
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
+                        child: profile.isEmpty ? Icon(Icons.person) : null,
+                      ),
+                      title: Text(name),
+                      subtitle: Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(conversationId: doc.id),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              }
             },
           );
         },

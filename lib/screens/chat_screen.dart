@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
+import 'chat_group_info.dart';
+
 class ChatScreen extends StatefulWidget {
   final String conversationId;
   ChatScreen({required this.conversationId});
@@ -148,78 +150,81 @@ class _ChatScreenState extends State<ChatScreen> {
     final sentBy = msg['sentBy'];
     final timestamp = msg['time'] as Timestamp?;
     final isMe = sentBy == currentUser.uid;
-
     final showProfile = prevMsg == null || prevMsg['sentBy'] != sentBy;
 
     return FutureBuilder<Map<String, dynamic>>(
-      future: showProfile ? getUserInfo(sentBy) : Future.value({}),
+      future: showProfile && !isMe ? getUserInfo(sentBy) : Future.value({}),
       builder: (context, snapshot) {
         final user = snapshot.data;
         final username = user?['username'] ?? '';
         final userImage = user?['profileImage'] ?? '';
 
-        return Align(
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: EdgeInsets.symmetric(vertical: showProfile ? 8 : 2),
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!isMe && showProfile)
-                  CircleAvatar(
+        return Padding(
+          padding: EdgeInsets.only(top: showProfile ? 10 : 2, left: 8, right: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              if (!isMe && showProfile)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: CircleAvatar(
                     radius: 18,
                     backgroundImage: userImage.isNotEmpty ? NetworkImage(userImage) : null,
                     child: userImage.isEmpty ? Icon(Icons.person) : null,
                   ),
-                if (!isMe && showProfile) SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment:
-                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                    children: [
-                      if (!isMe && showProfile)
-                        Text(username,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Container(
-                        padding: EdgeInsets.all(12),
-                        margin: EdgeInsets.only(top: 4),
-                        decoration: BoxDecoration(
-                          color: isMe ? Color(0xFFD2F8D2) : Color(0xFFECECEC),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                            bottomLeft: Radius.circular(isMe ? 12 : 0),
-                            bottomRight: Radius.circular(isMe ? 0 : 12),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (mediaUrl != null && mediaUrl.isNotEmpty)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(mediaUrl, height: 120, fit: BoxFit.cover),
-                              ),
-                            if (text.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(text, style: TextStyle(fontSize: 16)),
-                              ),
-                          ],
+                )
+              else if (!isMe)
+                SizedBox(width: 44),
+
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  children: [
+                    if (!isMe && showProfile)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          username,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        formatTimestamp(timestamp),
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isMe ? Color(0xFFD2F8D2) : Color(0xFFECECEC),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                          bottomLeft: Radius.circular(isMe ? 12 : 0),
+                          bottomRight: Radius.circular(isMe ? 0 : 12),
+                        ),
                       ),
-                    ],
-                  ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (mediaUrl != null && mediaUrl.isNotEmpty)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(mediaUrl, height: 120, fit: BoxFit.cover),
+                            ),
+                          if (text.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(text, style: TextStyle(fontSize: 16)),
+                            ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      formatTimestamp(timestamp),
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -251,20 +256,32 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.teal,
-        title: Row(
-          children: [
-            profileUrl != null && profileUrl!.isNotEmpty
-                ? CircleAvatar(backgroundImage: NetworkImage(profileUrl!))
-                : CircleAvatar(child: Icon(Icons.group)),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                conversationName,
-                style: TextStyle(fontSize: 18),
-                overflow: TextOverflow.ellipsis,
+        title: InkWell(
+          onTap: () {
+            if (conversationType == 'group') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GroupInfoScreen(conversationId: widget.conversationId),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              profileUrl != null && profileUrl!.isNotEmpty
+                  ? CircleAvatar(backgroundImage: NetworkImage(profileUrl!))
+                  : CircleAvatar(child: Icon(Icons.group)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  conversationName,
+                  style: TextStyle(fontSize: 18),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       body: Column(
