@@ -13,9 +13,6 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
   String searchText = '';
   final currentUser = FirebaseAuth.instance.currentUser;
   late TabController _tabController;
-  Set<String> localFriendRequests = {};
-  Set<String> localSentRequests = {};
-
 
   @override
   void initState() {
@@ -165,26 +162,19 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
           .doc(currentUser!.uid)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
-        }
 
         final data = snapshot.data!.data() as Map<String, dynamic>?;
-        final firestoreRequests = List<String>.from(data?['friend_requests'] ?? []);
+        final requestIds = List<String>.from(data?['friend_requests'] ?? []);
 
-        // Sync Firestore friend requests into local list if needed
-        if (localFriendRequests.isEmpty || localFriendRequests.length != firestoreRequests.length) {
-          localFriendRequests = firestoreRequests.toSet();
-        }
-
-        if (localFriendRequests.isEmpty) {
+        if (requestIds.isEmpty)
           return const Center(child: Text('No friend requests.'));
-        }
 
         return ListView.builder(
-          itemCount: localFriendRequests.length,
+          itemCount: requestIds.length,
           itemBuilder: (context, index) {
-            final senderId = localFriendRequests.elementAt(index);
+            final senderId = requestIds[index];
 
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -192,45 +182,30 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
                   .doc(senderId)
                   .get(),
               builder: (context, senderSnapshot) {
-                if (!senderSnapshot.hasData) {
+                if (!senderSnapshot.hasData)
                   return const ListTile(title: Text('Loading...'));
-                }
 
-                final senderData = senderSnapshot.data!.data() as Map<String, dynamic>?;
-
-                if (senderData == null) return const SizedBox();
+                final senderData =
+                senderSnapshot.data!.data() as Map<String, dynamic>?;
 
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      senderData['profileImage'] ??
-                          'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg',
-                    ),
+                    backgroundImage: NetworkImage(senderData?['profileImage'] ??
+                        'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg'),
                   ),
-                  title: Text(senderData['username'] ?? 'No name'),
+                  title: Text(senderData?['username'] ?? 'No name'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ElevatedButton(
                         onPressed: () => _acceptFriendRequest(
-                          senderId,
-                          senderData['username'] ?? '',
-                        ),
+                            senderId, senderData?['username'] ?? ''),
                         child: const Text('Accept'),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
-                        onPressed: () async {
-                          await _cancelReceivedRequest(
-                            senderId,
-                            senderData['username'] ?? '',
-                          );
-
-                          /// 👇 Remove immediately from UI
-                          setState(() {
-                            localFriendRequests.remove(senderId);
-                          });
-                        },
+                        onPressed: () => _cancelReceivedRequest(
+                            senderId, senderData?['username'] ?? ''),
                         child: const Text('Cancel'),
                       ),
                     ],
@@ -245,32 +220,25 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
   }
 
   Widget _buildSentFriendRequests() {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser!.uid)
-          .snapshots(),
+          .get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
-        }
 
         final data = snapshot.data!.data() as Map<String, dynamic>?;
-        final firestoreSentRequests = List<String>.from(data?['friend_requests_sent'] ?? []);
+        final sentIds = List<String>.from(data?['friend_requests_sent'] ?? []);
 
-        // Sync into local
-        if (localSentRequests.isEmpty || localSentRequests.length != firestoreSentRequests.length) {
-          localSentRequests = firestoreSentRequests.toSet();
-        }
-
-        if (localSentRequests.isEmpty) {
+        if (sentIds.isEmpty)
           return const Center(child: Text('No sent requests.'));
-        }
 
         return ListView.builder(
-          itemCount: localSentRequests.length,
+          itemCount: sentIds.length,
           itemBuilder: (context, index) {
-            final receiverId = localSentRequests.elementAt(index);
+            final receiverId = sentIds[index];
 
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -278,11 +246,11 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
                   .doc(receiverId)
                   .get(),
               builder: (context, receiverSnapshot) {
-                if (!receiverSnapshot.hasData) {
+                if (!receiverSnapshot.hasData)
                   return const ListTile(title: Text('Loading...'));
-                }
 
-                final receiverData = receiverSnapshot.data!.data() as Map<String, dynamic>?;
+                final receiverData =
+                receiverSnapshot.data!.data() as Map<String, dynamic>?;
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -291,14 +259,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
                   ),
                   title: Text(receiverData?['username'] ?? 'No name'),
                   trailing: OutlinedButton(
-                    onPressed: () async {
-                      await _cancelFriendRequest(receiverId, receiverData?['username'] ?? '');
-
-                      /// 👇 Update UI immediately
-                      setState(() {
-                        localSentRequests.remove(receiverId);
-                      });
-                    },
+                    onPressed: () => _cancelFriendRequest(
+                        receiverId, receiverData?['username'] ?? ''),
                     child: const Text('Cancel'),
                   ),
                 );
@@ -309,7 +271,6 @@ class _AddFriendScreenState extends State<AddFriendScreen> with TickerProviderSt
       },
     );
   }
-
 
   Future<void> _sendFriendRequest(
       String receiverId, String receiverUsername) async {
