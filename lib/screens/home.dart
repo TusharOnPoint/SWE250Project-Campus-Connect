@@ -2,16 +2,13 @@ import 'package:campus_connect/widgets/postCard.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../widgets/widgetBuilder.dart';
-import 'profile.dart';
-import 'groups.dart';
+import 'create_group_screen.dart';
 import 'pages.dart';
 import 'notifications.dart';
 import 'messages.dart';
-import 'explore.dart';
 import 'add_friend.dart';
-import 'universities.dart'; // Import UniversitiesScreen
+import 'universities.dart';
 
 class HomeScreen extends StatelessWidget {
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
@@ -53,7 +50,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => GroupsScreen()),
+                MaterialPageRoute(builder: (context) => CreateGroupScreen()),
               );
             },
           ),

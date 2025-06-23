@@ -226,4 +226,4 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       ),
     );
   }
-}
+} 

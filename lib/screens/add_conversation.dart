@@ -171,7 +171,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
                   SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: createGroup,
-                    child: Text("Create Group"),
+                    child: Text("Create a group"),
                   )
                 ],
               ),
