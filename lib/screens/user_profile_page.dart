@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import '../widgets/postCard.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final UserModel? userModel;
-  final String? userId;
+  final Map<String, dynamic> user;
+  //final String? userId;
 
-  const UserProfileScreen({super.key, required this.userId, this.userModel});
+  const UserProfileScreen({super.key, required this.user});
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
@@ -21,22 +21,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    //_loadUserData();
+    userData = widget.user;
   }
 
-  Future<void> _loadUserData() async {
-    final doc = await _firestore.collection('users').doc(widget.userId).get();
-    if (doc.exists) {
-      setState(() {
-        userData = doc.data();
-      });
-    }
-  }
+  // Future<void> _loadUserData() async {
+  //   //final doc = await _firestore.collection('users').doc(widget.userId).get();
+  //   if (doc.exists) {
+  //     setState(() {
+  //       userData = doc.data();
+  //     });
+  //   }
+  // }
 
   Stream<QuerySnapshot> _fetchPosts() {
     return _firestore
         .collection('posts')
-        .where('authorId', isEqualTo: widget.userId)
+        .where('authorId', isEqualTo: widget.user['uid'])
         .orderBy('timestamp', descending: true)
         .snapshots();
   }
@@ -135,7 +136,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         itemBuilder: (context, index) {
                           return PostCard(
                             postDoc: posts[index],
-                            currentUserId: widget.userId!,
+                            currentUserId: userData!['uid'],
+                            navigateToUserProfile: false,
                           );
                         },
                       );

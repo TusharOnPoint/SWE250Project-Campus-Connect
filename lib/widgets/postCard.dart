@@ -9,12 +9,13 @@ class PostCard extends StatefulWidget {
   final DocumentSnapshot postDoc;
   final String currentUserId;
   final isNavigate;
+  bool navigateToUserProfile;
 
-  const PostCard({
+  PostCard({
     super.key,
     required this.postDoc,
     required this.currentUserId,
-    this.isNavigate = true,
+    this.isNavigate = true, this.navigateToUserProfile=true,
   });
 
   @override
@@ -108,9 +109,11 @@ class _PostCardState extends State<PostCard> {
                 title: InkWell(
                   child: Text(authorName),
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => UserProfileScreen(userId: authorId!),
-                    ));
+                    if(author!=null&&widget.navigateToUserProfile){
+                      Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => UserProfileScreen(user: author,),));
+                    }
+                    
                   },
                 ),
                 subtitle: timestamp != null
