@@ -1,13 +1,13 @@
-import 'package:campus_connect/services/user_sevice.dart';
-import 'package:campus_connect/widgets/widgetBuilder.dart';
+import 'package:campus_connect/utils/userModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../widgets/postCard.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final String userId;
+  final UserModel? userModel;
+  final String? userId;
 
-  const UserProfileScreen({super.key, required this.userId});
+  const UserProfileScreen({super.key, required this.userId, this.userModel});
 
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
@@ -15,7 +15,7 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final UserService _userService = UserService();
+  //final UserService _userService = UserService();
   Map<String, dynamic>? userData;
 
   @override
@@ -135,7 +135,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         itemBuilder: (context, index) {
                           return PostCard(
                             postDoc: posts[index],
-                            currentUserId: widget.userId,
+                            currentUserId: widget.userId!,
                           );
                         },
                       );

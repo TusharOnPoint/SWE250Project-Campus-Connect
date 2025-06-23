@@ -32,7 +32,7 @@ class AppRouter {
 
       case '/profile':
         return MaterialPageRoute(
-          builder: (context) => UserProfileScreen(userId: 'L4F0x6RU95YwuJramI1iDZw2MBf2'),
+          builder: (context) => ProfileScreen(),
         );
 
       case '/messages':
