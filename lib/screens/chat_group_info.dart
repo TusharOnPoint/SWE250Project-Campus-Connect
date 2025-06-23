@@ -6,8 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const cloudinaryUploadPreset = 'YOUR_UPLOAD_PRESET'; // <-- Replace with actual preset
-const cloudinaryCloudName = 'YOUR_CLOUD_NAME';       // <-- Replace with actual cloud name
+import 'add_Gchat_member.dart'; // Import the screen you're navigating to
+
+const cloudinaryUploadPreset = 'YOUR_UPLOAD_PRESET'; // Replace with actual preset
+const cloudinaryCloudName = 'YOUR_CLOUD_NAME';       // Replace with actual cloud name
 
 class GroupInfoScreen extends StatefulWidget {
   final String conversationId;
@@ -23,7 +25,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   String groupProfile = '';
   List<String> participants = [];
   final nameController = TextEditingController();
-  Map<String, Map<String, String>> userCache = {}; // uid => {username, profileImage}
+  Map<String, Map<String, String>> userCache = {};
+  bool isEditingName = false;
 
   @override
   void initState() {
@@ -44,7 +47,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       groupProfile = data['conversationProfile'] ?? '';
       nameController.text = groupName;
 
-      // Load user info
+      userCache.clear();
       for (final uid in participants) {
         final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
         if (userDoc.exists) {
@@ -69,6 +72,9 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       setState(() {
         groupName = newName;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Group name updated successfully')),
+      );
     }
   }
 
@@ -116,44 +122,24 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
     setState(() {});
   }
 
-  void showAddMemberDialog() {
-    String newUid = '';
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Add Member'),
-        content: TextField(
-          decoration: InputDecoration(hintText: 'Enter user ID'),
-          onChanged: (val) => newUid = val,
+  Future<void> navigateToAddMemberScreen() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddMemberScreen(
+          conversationId: widget.conversationId,
+          existingParticipants: participants,
         ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              if (newUid.trim().isNotEmpty && !participants.contains(newUid)) {
-                participants.add(newUid.trim());
-
-                final userDoc = await FirebaseFirestore.instance.collection('users').doc(newUid).get();
-                if (userDoc.exists) {
-                  userCache[newUid] = {
-                    'username': userDoc['username'] ?? 'Unknown',
-                    'profileImage': userDoc['profileImage'] ?? '',
-                  };
-                }
-
-                await FirebaseFirestore.instance
-                    .collection('conversations')
-                    .doc(widget.conversationId)
-                    .update({'participants': participants});
-
-                setState(() {});
-                Navigator.pop(context);
-              }
-            },
-            child: Text('Add'),
-          ),
-        ],
       ),
     );
+
+    if (result == true) {
+      // If members were added, refresh UI and show snackbar
+      await loadGroupInfo();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Member(s) added successfully')),
+      );
+    }
   }
 
   @override
@@ -163,7 +149,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
         title: Text('Group Info'),
         backgroundColor: Colors.teal,
         actions: [
-          IconButton(icon: Icon(Icons.person_add), onPressed: showAddMemberDialog),
+          IconButton(icon: Icon(Icons.person_add), onPressed: navigateToAddMemberScreen),
         ],
       ),
       body: Column(
@@ -173,8 +159,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             onTap: updateProfileImage,
             child: CircleAvatar(
               radius: 50,
-              backgroundImage:
-              groupProfile.isNotEmpty ? NetworkImage(groupProfile) : null,
+              backgroundImage: groupProfile.isNotEmpty ? NetworkImage(groupProfile) : null,
               child: groupProfile.isEmpty ? Icon(Icons.group, size: 40) : null,
             ),
           ),
@@ -183,36 +168,50 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 200,
+                width: 120,
                 child: TextField(
                   controller: nameController,
+                  readOnly: !isEditingName,
                   textAlign: TextAlign.center,
-                  decoration: InputDecoration(border: InputBorder.none),
-                  style:
-                  TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    border: isEditingName ? UnderlineInputBorder() : InputBorder.none,
+                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
-              IconButton(icon: Icon(Icons.edit), onPressed: updateGroupName),
+              IconButton(
+                icon: Icon(isEditingName ? Icons.check : Icons.edit),
+                onPressed: () {
+                  if (isEditingName) {
+                    updateGroupName();
+                  }
+                  setState(() {
+                    isEditingName = !isEditingName;
+                  });
+                },
+              ),
             ],
           ),
           SizedBox(height: 20),
-          Text('Members (${participants.length})',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(
+            'Members (${participants.length})',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           Expanded(
             child: ListView.builder(
               itemCount: participants.length,
               itemBuilder: (_, i) {
                 final uid = participants[i];
-                final user = userCache[uid] ??
-                    {'username': 'Loading...', 'profileImage': ''};
+                final user = userCache[uid] ?? {
+                  'username': 'Loading...',
+                  'profileImage': '',
+                };
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundImage: user['profileImage']!.isNotEmpty
                         ? NetworkImage(user['profileImage']!)
                         : null,
-                    child: user['profileImage']!.isEmpty
-                        ? Icon(Icons.person)
-                        : null,
+                    child: user['profileImage']!.isEmpty ? Icon(Icons.person) : null,
                   ),
                   title: Text(user['username']!),
                   trailing: IconButton(
