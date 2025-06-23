@@ -187,7 +187,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         },
       ),
       floatingActionButton: Tooltip(
-        message: 'Create Group',
+        message: 'Create conversation',
         child: FloatingActionButton(
           child: Icon(Icons.add),
           onPressed: () => Navigator.pushNamed(context, '/addConversation'),

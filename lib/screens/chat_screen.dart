@@ -258,7 +258,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           if (text.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
-                              child: Text(text, style: TextStyle(fontSize: 16)),
+                              child: SelectableText(text, style: TextStyle(fontSize: 16)),
                             ),
                         ],
                       ),
