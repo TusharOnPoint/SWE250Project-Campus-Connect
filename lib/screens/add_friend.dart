@@ -37,7 +37,7 @@ class _AddFriendScreenState extends State<AddFriendScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.people_alt),
-            tooltip: 'Friends',
+            tooltip: 'Your Friends',
             onPressed: () {
               Navigator.push(
                 context,
@@ -143,6 +143,7 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundImage:
+                        (user.data() as Map<String, dynamic>).containsKey('profileImage') &&
                         user['profileImage'] != null
                             ? NetworkImage(user['profileImage'])
                             : AssetImage('assets/images/user_placeholder.jpg')

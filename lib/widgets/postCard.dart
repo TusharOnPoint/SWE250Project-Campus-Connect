@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:campus_connect/services/user_sevice.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -85,6 +86,8 @@ class _PostCardState extends State<PostCard> {
       future: UserService.getUserDataByUid(postData['authorId']),
       builder: (context, snapshot) {
         final author = snapshot.data;
+        final authorId = author?['uid'] ?? 'Unknown';
+        //print(authorId);
         final authorName = author?['username'] ?? 'Unknown';
         final profileImage = author?['profileImage'] ?? '';
 
@@ -102,7 +105,14 @@ class _PostCardState extends State<PostCard> {
                       ? NetworkImage(profileImage)
                       : const AssetImage('assets/images/profile_placeholder.jpg') as ImageProvider,
                 ),
-                title: Text(authorName),
+                title: InkWell(
+                  child: Text(authorName),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => UserProfileScreen(userId: authorId!),
+                    ));
+                  },
+                ),
                 subtitle: timestamp != null
                     ? Text(DateFormat.yMMMd().add_jm().format(timestamp))
                     : null,

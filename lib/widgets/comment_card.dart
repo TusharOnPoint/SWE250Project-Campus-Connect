@@ -111,7 +111,7 @@ class _CommentCardState extends State<CommentCard> {
                   ),
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: const EdgeInsets.all(10.0),
+                    padding: const EdgeInsets.all(4.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -127,31 +127,36 @@ class _CommentCardState extends State<CommentCard> {
                               ),
                             ),
                             if (isCommentAuthor || isPostAuthor)
-                              PopupMenuButton<String>(
-                                onSelected: (value) {
-                                  if (value == 'edit') _editComment();
-                                  if (value == 'delete') _deleteComment();
-                                },
-                                itemBuilder: (context) {
-                                  final items = <PopupMenuEntry<String>>[];
-                                  if (isCommentAuthor) {
+                              SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: PopupMenuButton<String>(
+                                  padding: EdgeInsets.zero,
+                                  onSelected: (value) {
+                                    if (value == 'edit') _editComment();
+                                    if (value == 'delete') _deleteComment();
+                                  },
+                                  itemBuilder: (context) {
+                                    final items = <PopupMenuEntry<String>>[];
+                                    if (isCommentAuthor) {
+                                      items.add(const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
+                                      ));
+                                    }
                                     items.add(const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Edit'),
+                                      value: 'delete',
+                                      child: Text('Delete'),
                                     ));
-                                  }
-                                  items.add(const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Delete'),
-                                  ));
-                                  return items;
-                                },
-                                icon: const Icon(Icons.more_vert, size: 18),
+                                    return items;
+                                  },
+                                  icon: Align(alignment: Alignment.center, child: const Icon(Icons.more_vert, size: 12)),
+                                ),
                               ),
                           ],
                         ),
 
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
 
                         /// Comment text
                         Text(
