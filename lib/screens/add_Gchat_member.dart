@@ -5,7 +5,10 @@ class AddMemberScreen extends StatefulWidget {
   final String conversationId;
   final List<String> existingParticipants;
 
-  AddMemberScreen({required this.conversationId, required this.existingParticipants});
+  AddMemberScreen({
+    required this.conversationId,
+    required this.existingParticipants,
+  });
 
   @override
   _AddMemberScreenState createState() => _AddMemberScreenState();
@@ -24,32 +27,42 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }
 
   Future<void> fetchAllUsers() async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').get();
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('users').get();
 
-    final users = snapshot.docs.map((doc) {
-      return {
-        'uid': doc.id,
-        'username': doc['username'] ?? '',
-        'profileImage': doc['profileImage'] ?? '',
-      };
-    }).where((user) => !widget.existingParticipants.contains(user['uid'])).toList();
+      final users = snapshot.docs.map((doc) {
+        final data = doc.data();
 
-    setState(() {
-      allUsers = users;
-      filteredUsers = users;
-    });
+        return {
+          'uid': doc.id,
+          'username': data['username'] ?? '',
+          'profileImage': data.containsKey('profileImage') ? data['profileImage'] ?? '' : '',
+        };
+      }).where((user) =>
+      !widget.existingParticipants.contains(user['uid']) &&
+          (user['username'] ?? '').toString().isNotEmpty
+      ).toList();
+
+      setState(() {
+        allUsers = users;
+        filteredUsers = users;
+      });
+
+      print('Fetched users: ${users.map((u) => u['username']).toList()}');
+    } catch (e) {
+      print('Error fetching users: $e');
+    }
   }
 
-  void filterUsers(String query) {
-    final lowerQuery = query.toLowerCase();
-    final filtered = allUsers.where((user) {
-      final username = user['username'].toString().toLowerCase();
-      return username.contains(lowerQuery);
-    }).toList();
 
+  void filterUsers(String query) {
+    final lowerQuery = query.toLowerCase().trim();
     setState(() {
       searchQuery = query;
-      filteredUsers = filtered;
+      filteredUsers = allUsers.where((user) {
+        final username = (user['username'] ?? '').toLowerCase();
+        return username.contains(lowerQuery);
+      }).toList();
     });
   }
 
@@ -89,11 +102,16 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           Padding(
             padding: EdgeInsets.all(10),
             child: TextField(
-              onChanged: filterUsers,
+              onChanged: (value) {
+                print("Searching: $value");
+                filterUsers(value);
+              },
               decoration: InputDecoration(
                 hintText: 'Search users',
                 prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),

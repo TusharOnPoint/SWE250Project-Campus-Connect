@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/widgetBuilder.dart';
-import 'create_group_screen.dart';
+import 'groups.dart';
 import 'pages.dart';
 import 'notifications.dart';
 import 'messages.dart';
@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CreateGroupScreen()),
+                MaterialPageRoute(builder: (context) => GroupsScreen()),
               );
             },
           ),

@@ -1,4 +1,3 @@
-// screens/create_group_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,7 +13,6 @@ class CreateGroupScreen extends StatefulWidget {
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController searchController = TextEditingController();
   String visibility = 'public';
   File? coverImage;
   final currentUser = FirebaseAuth.instance.currentUser;
@@ -90,54 +88,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               onPressed: createGroup,
               child: Text('Create Group'),
             ),
-            Divider(height: 40),
-            TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                labelText: 'Search My Groups by Name',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (val) => setState(() {}),
-            ),
-            SizedBox(height: 16),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('groups')
-                  .where('members', arrayContains: currentUser!.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                final docs = snapshot.data!.docs;
-                final filteredGroups = docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final groupName = (data['name'] ?? '').toString().toLowerCase();
-                  return groupName.contains(searchController.text.trim().toLowerCase());
-                }).toList();
-
-                if (filteredGroups.isEmpty) {
-                  return Text('No groups found.');
-                }
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: filteredGroups.length,
-                  itemBuilder: (context, index) {
-                    final group = filteredGroups[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(group['name'] ?? ''),
-                      subtitle: Text(group['description'] ?? ''),
-                      leading: CircleAvatar(child: Icon(Icons.group)),
-                      onTap: () {
-                        // Navigate to group detail/feed screen if needed
-                      },
-                    );
-                  },
-                );
-              },
-            )
           ],
         ),
       ),

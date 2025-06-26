@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'chat_screen.dart';
+
 class AddConversationScreen extends StatefulWidget {
   @override
   _AddConversationScreenState createState() => _AddConversationScreenState();
@@ -36,25 +38,36 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
   }
 
   void createGroup() async {
-    if (_groupNameController.text.trim().isEmpty) return;
+    final groupName = _groupNameController.text.trim();
+    if (groupName.isEmpty || selectedUserIds.length < 2) return;
 
     final groupDoc = FirebaseFirestore.instance.collection('conversations').doc();
+
     await groupDoc.set({
       'conversationId': groupDoc.id,
-      'conversationName': _groupNameController.text.trim(),
-      'conversationProfile': '',
+      'conversationName': groupName,
+      'conversationProfile': '', // You can add group photo upload later
       'type': 'group',
       'participants': [currentUser.uid, ...selectedUserIds],
       'lastMessage': '',
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
 
-    Navigator.pop(context);
+    // Navigate directly to ChatScreen after group creation
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(conversationId: groupDoc.id),
+      ),
+    );
   }
 
+
   Future<void> startPrivateConversation() async {
+    if (selectedUserIds.length != 1) return;
     final selectedUserId = selectedUserIds.first;
 
+    // Check if private conversation already exists
     final existingConversations = await FirebaseFirestore.instance
         .collection('conversations')
         .where('type', isEqualTo: 'private')
@@ -64,14 +77,22 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
     for (var doc in existingConversations.docs) {
       final participants = List<String>.from(doc['participants']);
       if (participants.contains(selectedUserId) && participants.length == 2) {
-        Navigator.pushNamed(context, '/chat', arguments: doc.id);
+        // Already exists
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatScreen(conversationId: doc.id),
+          ),
+        );
         return;
       }
     }
 
+    // Fetch selected user's data
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(selectedUserId).get();
     final userData = userDoc.data() as Map<String, dynamic>;
 
+    // Create new conversation
     final conversationDoc = FirebaseFirestore.instance.collection('conversations').doc();
 
     await conversationDoc.set({
@@ -84,8 +105,14 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
 
-    Navigator.pushNamed(context, '/chat', arguments: conversationDoc.id);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(conversationId: conversationDoc.id),
+      ),
+    );
   }
+
 
   Widget buildUserList(List<DocumentSnapshot> users) {
     return ListView(
