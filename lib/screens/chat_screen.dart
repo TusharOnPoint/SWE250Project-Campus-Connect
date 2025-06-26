@@ -43,10 +43,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void loadConversationData() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(widget.conversationId)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(widget.conversationId)
+            .get();
 
     if (doc.exists) {
       final data = doc.data()!;
@@ -54,12 +55,19 @@ class _ChatScreenState extends State<ChatScreen> {
       conversationType = data['type'] ?? '';
 
       if (conversationType == 'private') {
-        final otherUserId = participants.firstWhere((id) => id != currentUser.uid);
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+        final otherUserId = participants.firstWhere(
+          (id) => id != currentUser.uid,
+          orElse: () => ''
+        );
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(otherUserId)
+                .get();
 
         setState(() {
-          conversationName = userDoc['username'] ?? 'Chat';
-          profileUrl = userDoc['profileImage'] ?? '';
+          conversationName = userDoc.data()?['username'] ?? 'Chat';
+          profileUrl = userDoc.data()?['profileImage'] ?? '';
         });
       } else {
         setState(() {
@@ -71,11 +79,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<String?> uploadImageToCloudinary(XFile image) async {
-    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload');
+    final uri = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload',
+    );
 
-    final request = http.MultipartRequest('POST', uri)
-      ..fields['upload_preset'] = cloudinaryUploadPreset
-      ..files.add(await http.MultipartFile.fromPath('file', image.path));
+    final request =
+        http.MultipartRequest('POST', uri)
+          ..fields['upload_preset'] = cloudinaryUploadPreset
+          ..files.add(await http.MultipartFile.fromPath('file', image.path));
 
     final response = await request.send();
     final responseBody = await response.stream.bytesToString();
@@ -90,7 +101,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty && selectedImage == null && selectedWebImage == null) return;
+    if (text.trim().isEmpty &&
+        selectedImage == null &&
+        selectedWebImage == null)
+      return;
 
     final conversationDoc = FirebaseFirestore.instance
         .collection('conversations')
@@ -133,7 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
       List seenBy = doc['seenBy'] ?? [];
       if (!seenBy.contains(currentUser.uid)) {
         await doc.reference.update({
-          'seenBy': FieldValue.arrayUnion([currentUser.uid])
+          'seenBy': FieldValue.arrayUnion([currentUser.uid]),
         });
       }
     }
@@ -143,10 +157,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (userCache.containsKey(userId)) {
       return userCache[userId]!;
     }
-    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final docData = doc.data(); // nullable
+
     final data = {
-      'username': doc['username'] ?? 'Unknown',
-      'profileImage': doc['profileImage'] ?? '',
+      'username': docData?['username'] ?? 'Unknown',
+      'profileImage': (docData?['profileImage'] ?? '').toString(),
     };
     userCache[userId] = data;
     return data;
@@ -170,20 +187,26 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, snapshot) {
         final user = snapshot.data;
         final username = user?['username'] ?? '';
-        final userImage = user?['profileImage'] ?? '';
+        final userImage = (user?['profileImage'] ?? '') as String;
 
         return Padding(
-          padding: EdgeInsets.only(top: showProfile ? 10 : 2, left: 8, right: 8),
+          padding: EdgeInsets.only(
+            top: showProfile ? 10 : 2,
+            left: 8,
+            right: 8,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               if (!isMe && showProfile)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: CircleAvatar(
                     radius: 18,
-                    backgroundImage: userImage.isNotEmpty ? NetworkImage(userImage) : null,
+                    backgroundImage:
+                        userImage.isNotEmpty ? NetworkImage(userImage) : null,
                     child: userImage.isEmpty ? Icon(Icons.person) : null,
                   ),
                 )
@@ -192,18 +215,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
               Flexible(
                 child: Column(
-                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
                     if (!isMe && showProfile)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text(
                           username,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: isMe ? Color(0xFFD2F8D2) : Color(0xFFECECEC),
                         borderRadius: BorderRadius.only(
@@ -219,7 +249,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           if (mediaUrl != null && mediaUrl.isNotEmpty)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(mediaUrl, height: 120, fit: BoxFit.cover),
+                              child: Image.network(
+                                mediaUrl,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           if (text.isNotEmpty)
                             Padding(
@@ -275,7 +309,10 @@ class _ChatScreenState extends State<ChatScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => GroupInfoScreen(conversationId: widget.conversationId),
+                  builder:
+                      (_) => GroupInfoScreen(
+                        conversationId: widget.conversationId,
+                      ),
                 ),
               );
             }
@@ -301,19 +338,23 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('conversations')
-                  .doc(widget.conversationId)
-                  .collection('messages')
-                  .orderBy('time', descending: false)
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('conversations')
+                      .doc(widget.conversationId)
+                      .collection('messages')
+                      .orderBy('time', descending: false)
+                      .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData)
+                  return Center(child: CircularProgressIndicator());
 
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   markMessagesAsSeen(snapshot.data!);
                   if (scrollController.hasClients) {
-                    scrollController.jumpTo(scrollController.position.maxScrollExtent);
+                    scrollController.jumpTo(
+                      scrollController.position.maxScrollExtent,
+                    );
                   }
                 });
 
@@ -338,20 +379,30 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: kIsWeb
-                        ? Image.network(selectedWebImage!.path, height: 100, fit: BoxFit.cover)
-                        : Image.file(selectedImage!, height: 100, fit: BoxFit.cover),
+                    child:
+                        kIsWeb
+                            ? Image.network(
+                              selectedWebImage!.path,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            )
+                            : Image.file(
+                              selectedImage!,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
                   ),
                   Positioned(
                     right: 0,
                     child: IconButton(
                       icon: Icon(Icons.cancel, color: Colors.red),
-                      onPressed: () => setState(() {
-                        selectedImage = null;
-                        selectedWebImage = null;
-                      }),
+                      onPressed:
+                          () => setState(() {
+                            selectedImage = null;
+                            selectedWebImage = null;
+                          }),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -399,10 +450,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
                   child: Text('Send', style: TextStyle(color: Colors.white)),
-                )
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

@@ -1,42 +1,202 @@
-import 'package:campus_connect/utils/userModel.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:campus_connect/services/user_sevice.dart';
+import 'package:campus_connect/services/friend_manager.dart';   // <-- adjust path if needed
 import '../widgets/postCard.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final UserModel? userModel;
-  final String? userId;
+  final Map<String, dynamic> user;  
 
-  const UserProfileScreen({super.key, required this.userId, this.userModel});
+  const UserProfileScreen({Key? key, required this.user}) : super(key: key);
 
   @override
-  _UserProfileScreenState createState() => _UserProfileScreenState();
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  //final UserService _userService = UserService();
+  final UserService _userService = UserService();
+
   Map<String, dynamic>? userData;
+
+  String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  bool _isFriend = false;
+  bool _isRequestSent = false;
+  bool _isRequestReceived = false;
+  bool _loadingRelationship = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    userData = widget.user;
+    _initRelationship();
   }
 
-  Future<void> _loadUserData() async {
-    final doc = await _firestore.collection('users').doc(widget.userId).get();
-    if (doc.exists) {
-      setState(() {
-        userData = doc.data();
-      });
+  // tiny refresh whenever this screen regains focus
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _initRelationship();
+  }
+
+  Future<void> _initRelationship() async {
+    final myData = await _userService.fetchUserData(); 
+    if (!mounted || myData == null) return;
+
+    final sent     = List<String>.from(myData['friend_requests_sent'] ?? []);
+    final friends  = List<String>.from(myData['friends'] ?? []);
+    final received = List<String>.from(myData['friend_requests'] ?? []);
+
+    final viewedUid = widget.user['uid'] as String;
+
+    setState(() {
+      _isFriend          = friends.contains(viewedUid);
+      _isRequestSent     = sent.contains(viewedUid);
+      _isRequestReceived = received.contains(viewedUid);
+      _loadingRelationship = false;
+    });
+  }
+
+  Future<void> _sendRequest() async {
+    await FriendManager.sendFriendRequest(
+      context, _currentUid, widget.user['uid'], widget.user['username']);
+    setState(() => _isRequestSent = true);
+  }
+
+  Future<void> _cancelRequest() async {
+    await FriendManager.cancelFriendRequest(
+      context, _currentUid, widget.user['uid'], widget.user['username']);
+    setState(() => _isRequestSent = false);
+  }
+
+  Future<void> _acceptRequest() async {
+    await FriendManager.acceptFriendRequest(
+      context, _currentUid, widget.user['uid'], widget.user['username']);
+    setState(() {
+      _isFriend = true;
+      _isRequestReceived = false;
+    });
+  }
+
+  Future<void> _declineRequest() async {
+    await FriendManager.cancelReceivedRequest(
+      context, _currentUid, widget.user['uid'], widget.user['username']);
+    setState(() => _isRequestReceived = false);
+  }
+
+  Future<void> _unfriend() async {
+    await FriendManager.unfriend(
+      context, _currentUid, widget.user['uid'], widget.user['username']);
+    setState(() => _isFriend = false);
+  }
+
+  Widget _buildFriendButton() {
+    if (_loadingRelationship || widget.user['uid'] == _currentUid) {
+      return const SizedBox.shrink();
     }
+
+    if (_isFriend) {
+      return ElevatedButton.icon(
+        onPressed: _unfriend,
+        icon: const Icon(Icons.person_remove),
+        label: const Text('Unfriend'),
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+      );
+    }
+
+    if (_isRequestReceived) {
+      // dropdown- Accept  /  Delete
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: PopupMenuButton<String>(
+          splashRadius: 24,
+          onSelected: (v) => v == 'accept' ? _acceptRequest() : _declineRequest(),
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'accept',
+              child: ListTile(
+                leading: Icon(Icons.check_circle_outline),
+                title: Text('Accept'),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'decline',
+              child: ListTile(
+                leading: Icon(Icons.delete_outline),
+                title: Text('Delete', style: TextStyle(color: Colors.red),),
+              ),
+            ),
+          ],
+          child: IgnorePointer(
+            child: ElevatedButton.icon(
+              onPressed: () {}, 
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Respond'),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_isRequestSent) {
+      return ElevatedButton.icon(
+        onPressed: _cancelRequest,
+        icon: const Icon(Icons.hourglass_top),
+        label: const Text('Cancel Request'),
+      );
+    }
+
+    return ElevatedButton.icon(
+      onPressed: _sendRequest,
+      icon: const Icon(Icons.person_add_alt_1),
+      label: const Text('Add Friend'),
+    );
   }
 
-  Stream<QuerySnapshot> _fetchPosts() {
+  Widget _buildProfileDetail(IconData icon, String title, String detail) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue), const SizedBox(width: 10),
+          Text('$title:',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(detail,
+                style: const TextStyle(fontSize: 16, color: Colors.black87)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBioSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.blue),
+          const SizedBox(width: 10),
+          const Text('Bio:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(userData?['bio'] ?? 'No bio set',
+                style: const TextStyle(fontSize: 16, color: Colors.black87)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Stream<QuerySnapshot<Object?>> _fetchPosts() {
     return _firestore
         .collection('posts')
-        .where('authorId', isEqualTo: widget.userId)
+        .where('authorId', isEqualTo: widget.user['uid'])
         .orderBy('timestamp', descending: true)
         .snapshots();
   }
@@ -44,12 +204,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('User Profile'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('User Profile'), centerTitle: true),
       body: userData == null
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Column(
                 children: [
@@ -62,10 +219,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         height: 200,
                         decoration: BoxDecoration(
                           image: DecorationImage(
+                            fit: BoxFit.cover,
                             image: userData!['coverImage'] != null
                                 ? NetworkImage(userData!['coverImage'])
-                                : AssetImage('assets/images/cover_placeholder.jpg') as ImageProvider,
-                            fit: BoxFit.cover,
+                                : const AssetImage(
+                                        'assets/images/cover_placeholder.jpg')
+                                    as ImageProvider,
                           ),
                         ),
                       ),
@@ -78,106 +237,91 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             radius: 75,
                             backgroundImage: userData!['profileImage'] != null
                                 ? NetworkImage(userData!['profileImage'])
-                                : AssetImage('assets/images/user_placeholder.jpg') as ImageProvider,
+                                : const AssetImage(
+                                        'assets/images/user_placeholder.jpg')
+                                    as ImageProvider,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 80),
-                  Text(
-                    userData!['username'] ?? "User Name",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 80),
+
+                  //name & email
+                  Text(userData!['username'] ?? 'User Name',
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(userData!['email'] ?? 'user@example.com',
+                      style:
+                          const TextStyle(fontSize: 16, color: Colors.grey)),
+
+                  // friend / message buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildFriendButton(),
+                      const SizedBox(width: 30),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // TODO: navigate to chat
+                        },
+                        icon: const Icon(Icons.message_outlined),
+                        label: const Text('Message'),
+                      ),
+                    ],
                   ),
-                  Text(
-                    userData!['email'] ?? "user@example.com",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 100),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(onPressed: () {}, label: Text('Add friend')),
-                        SizedBox(width: 30,),
-                        ElevatedButton.icon(onPressed: () {}, label: Text('Message')),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _buildProfileDetail(Icons.school, "University", userData!['university'] ?? "Not set"),
-                  _buildProfileDetail(Icons.work, "Workplace", userData!['workplace'] ?? "Not set"),
-                  _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData!['hobbies'] ?? "Not set"),
-                  _buildProfileDetail(Icons.star, "Achievements", userData!['achievements'] ?? "Not set"),
+
+                  const SizedBox(height: 16),
+
+                  // details
+                  _buildProfileDetail(Icons.school,      'University',
+                      userData!['university'] ?? 'Not set'),
+                  _buildProfileDetail(Icons.work,        'Workplace',
+                      userData!['workplace'] ?? 'Not set'),
+                  _buildProfileDetail(Icons.sports_soccer,'Hobbies',
+                      userData!['hobbies'] ?? 'Not set'),
+                  _buildProfileDetail(Icons.star,        'Achievements',
+                      userData!['achievements'] ?? 'Not set'),
                   _buildBioSection(),
-                  SizedBox(height: 16),
-                  Text("Posts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 10),
+
+                  // posts
+                  const SizedBox(height: 16),
+                  const Text('Posts',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
                   StreamBuilder<QuerySnapshot>(
                     stream: _fetchPosts(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return CircularProgressIndicator();
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Text("No posts available."),
+                    builder: (context, snap) {
+                      if (snap.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      }
+                      if (snap.hasError) {
+                        return Text('Error: ${snap.error}');
+                      }
+                      if (!snap.hasData || snap.data!.docs.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Text('No posts available.'),
                         );
                       }
 
-                      final posts = snapshot.data!.docs;
+                      final posts = snap.data!.docs;
                       return ListView.builder(
-                        physics: NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
                         itemCount: posts.length,
-                        itemBuilder: (context, index) {
-                          return PostCard(
-                            postDoc: posts[index],
-                            currentUserId: widget.userId!,
-                          );
-                        },
+                        itemBuilder: (_, i) => PostCard(
+                          postDoc: posts[i],
+                          currentUserId: _currentUid,
+                          navigateToUserProfile: false,
+                        ),
                       );
                     },
                   ),
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _buildProfileDetail(IconData icon, String title, String detail) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.blue),
-          SizedBox(width: 10),
-          Text("$title:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(detail, style: TextStyle(fontSize: 16, color: Colors.black87)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBioSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.blue),
-          SizedBox(width: 10),
-          Text("Bio:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(userData?['bio'] ?? "No bio set", style: TextStyle(fontSize: 16, color: Colors.black87)),
-          ),
-        ],
-      ),
     );
   }
 }
