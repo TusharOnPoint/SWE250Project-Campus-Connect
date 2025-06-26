@@ -1,6 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
-
+import 'package:campus_connect/screens/full_screen_image.dart';
+import 'package:campus_connect/services/coudinary_services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,10 +20,6 @@ class ChatScreen extends StatefulWidget {
   _ChatScreenState createState() => _ChatScreenState();
 }
 
-// Replace with your Cloudinary details
-const cloudinaryUploadPreset = 'YOUR_UPLOAD_PRESET';
-const cloudinaryCloudName = 'YOUR_CLOUD_NAME';
-
 class _ChatScreenState extends State<ChatScreen> {
   final currentUser = FirebaseAuth.instance.currentUser!;
   final TextEditingController messageController = TextEditingController();
@@ -31,8 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String conversationName = 'Loading...';
   String? profileUrl;
   String conversationType = '';
-  File? selectedImage;
-  XFile? selectedWebImage;
+  FilePickerResult? _selectedFile;
 
   Map<String, dynamic> userCache = {};
 
@@ -57,7 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (conversationType == 'private') {
         final otherUserId = participants.firstWhere(
           (id) => id != currentUser.uid,
-          orElse: () => ''
+          orElse: () => '',
         );
         final userDoc =
             await FirebaseFirestore.instance
@@ -78,33 +74,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<String?> uploadImageToCloudinary(XFile image) async {
-    final uri = Uri.parse(
-      'https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload',
-    );
-
-    final request =
-        http.MultipartRequest('POST', uri)
-          ..fields['upload_preset'] = cloudinaryUploadPreset
-          ..files.add(await http.MultipartFile.fromPath('file', image.path));
-
-    final response = await request.send();
-    final responseBody = await response.stream.bytesToString();
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(responseBody);
-      return data['secure_url'];
-    } else {
-      print('Cloudinary upload failed: $responseBody');
-      return null;
-    }
-  }
-
   Future<void> sendMessage(String text) async {
-    if (text.trim().isEmpty &&
-        selectedImage == null &&
-        selectedWebImage == null)
-      return;
+    if (text.trim().isEmpty && _selectedFile == null) return;
 
     final conversationDoc = FirebaseFirestore.instance
         .collection('conversations')
@@ -112,13 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final messageRef = conversationDoc.collection('messages').doc();
 
     String? imageUrl;
-
-    if (selectedImage != null) {
-      final xfile = XFile(selectedImage!.path);
-      imageUrl = await uploadImageToCloudinary(xfile);
-    } else if (selectedWebImage != null) {
-      imageUrl = await uploadImageToCloudinary(selectedWebImage!);
-    }
+    imageUrl = await uploadToCloudinary(_selectedFile, 'image');
 
     final messageData = {
       'messageId': messageRef.id,
@@ -130,8 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     };
 
     messageController.clear();
-    selectedImage = null;
-    selectedWebImage = null;
+    _selectedFile = null;
     setState(() {});
 
     await messageRef.set(messageData);
@@ -246,19 +210,42 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // display message image
                           if (mediaUrl != null && mediaUrl.isNotEmpty)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                mediaUrl,
-                                height: 120,
-                                fit: BoxFit.cover,
+                            if (mediaUrl != null && mediaUrl.isNotEmpty)
+                              GestureDetector(
+                                onTap:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => FullScreenImage(
+                                              image: NetworkImage(mediaUrl),
+                                              heroTag: mediaUrl,
+                                            ),
+                                      ),
+                                    ),
+                                child: Hero(
+                                  tag: mediaUrl,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      mediaUrl,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+
+                          // message txt show
                           if (text.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
-                              child: SelectableText(text, style: TextStyle(fontSize: 16)),
+                              child: SelectableText(
+                                text,
+                                style: TextStyle(fontSize: 16),
+                              ),
                             ),
                         ],
                       ),
@@ -278,23 +265,60 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Future<void> pickImage() async {
-    final picker = ImagePicker();
-    if (kIsWeb) {
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        setState(() {
-          selectedWebImage = picked;
-        });
-      }
-    } else {
-      final picked = await picker.pickImage(source: ImageSource.gallery);
-      if (picked != null) {
-        setState(() {
-          selectedImage = File(picked.path);
-        });
-      }
-    }
+  Future<void> _pickMedia() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
+    );
+    if (result == null || result.files.single.path == null) return;
+
+    setState(() {
+      _selectedFile = result;
+    });
+  }
+
+  Widget _buildMediaPreview() {
+    if (_selectedFile == null) return const SizedBox.shrink();
+
+    final img =
+        kIsWeb
+            ? Image.memory(
+              _selectedFile!.files.single.bytes!,
+              fit: BoxFit.cover,
+            )
+            : Image.file(
+              File(_selectedFile!.files.single.path!),
+              fit: BoxFit.cover,
+            );
+
+    const heroTag = 'preview-image';
+
+    return GestureDetector(
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => FullScreenImage(
+                    image:
+                        kIsWeb
+                            ? MemoryImage(_selectedFile!.files.single.bytes!)
+                            : FileImage(File(_selectedFile!.files.single.path!))
+                                as ImageProvider,
+                    heroTag: heroTag,
+                  ),
+            ),
+          ),
+      child: Hero(
+        tag: heroTag,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 100, maxHeight: 100),
+          child: ClipRRect(borderRadius: BorderRadius.circular(8), child: img),
+        ),
+      ),
+    );
   }
 
   @override
@@ -372,25 +396,15 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          if (selectedImage != null || selectedWebImage != null)
+          // image preview
+          if (_selectedFile != null)
             Container(
               margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Stack(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child:
-                        kIsWeb
-                            ? Image.network(
-                              selectedWebImage!.path,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            )
-                            : Image.file(
-                              selectedImage!,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
+                    child: _buildMediaPreview(),
                   ),
                   Positioned(
                     right: 0,
@@ -398,8 +412,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       icon: Icon(Icons.cancel, color: Colors.red),
                       onPressed:
                           () => setState(() {
-                            selectedImage = null;
-                            selectedWebImage = null;
+                            _selectedFile = null;
                           }),
                     ),
                   ),
@@ -415,7 +428,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 IconButton(
                   icon: Icon(Icons.image, color: Colors.teal),
-                  onPressed: pickImage,
+                  onPressed: _pickMedia,
                 ),
                 Expanded(
                   child: Container(
