@@ -109,28 +109,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     if (_isRequestReceived) {
       // dropdown- Accept  /  Delete
-      return PopupMenuButton<String>(
-        onSelected: (v) => v == 'accept' ? _acceptRequest() : _declineRequest(),
-        itemBuilder: (_) => const [
-          PopupMenuItem(
-            value: 'accept',
-            child: ListTile(
-              leading: Icon(Icons.check_circle_outline),
-              title: Text('Accept'),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: PopupMenuButton<String>(
+          splashRadius: 24,
+          onSelected: (v) => v == 'accept' ? _acceptRequest() : _declineRequest(),
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'accept',
+              child: ListTile(
+                leading: Icon(Icons.check_circle_outline),
+                title: Text('Accept'),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'decline',
+              child: ListTile(
+                leading: Icon(Icons.delete_outline),
+                title: Text('Delete', style: TextStyle(color: Colors.red),),
+              ),
+            ),
+          ],
+          child: IgnorePointer(
+            child: ElevatedButton.icon(
+              onPressed: () {}, 
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Respond'),
             ),
           ),
-          PopupMenuItem(
-            value: 'decline',
-            child: ListTile(
-              leading: Icon(Icons.delete_outline),
-              title: Text('Delete'),
-            ),
-          ),
-        ],
-        child: ElevatedButton.icon(
-          onPressed: null, 
-          icon: const Icon(Icons.person_add_alt),
-          label: const Text('Respond'),
         ),
       );
     }
@@ -241,7 +247,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                   const SizedBox(height: 80),
 
-                  /* ── name & email ── */
+                  //name & email
                   Text(userData!['username'] ?? 'User Name',
                       style: const TextStyle(
                           fontSize: 24, fontWeight: FontWeight.bold)),
@@ -249,7 +255,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       style:
                           const TextStyle(fontSize: 16, color: Colors.grey)),
 
-                  /* ── friend / message buttons ── */
+                  // friend / message buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -267,7 +273,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
                   const SizedBox(height: 16),
 
-                  /* ── details ── */
+                  // details
                   _buildProfileDetail(Icons.school,      'University',
                       userData!['university'] ?? 'Not set'),
                   _buildProfileDetail(Icons.work,        'Workplace',
@@ -278,7 +284,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       userData!['achievements'] ?? 'Not set'),
                   _buildBioSection(),
 
-                  /* ── posts ── */
+                  // posts
                   const SizedBox(height: 16),
                   const Text('Posts',
                       style:

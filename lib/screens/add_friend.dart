@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -72,15 +73,15 @@ class _AddFriendScreenState extends State<AddFriendScreen>
             const SizedBox(height: 8),
             Expanded(
               child:
-              searchText.isNotEmpty
-                  ? _buildUserSearchResults()
-                  : TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildFriendRequests(),
-                  _buildSentFriendRequests(),
-                ],
-              ),
+                  searchText.isNotEmpty
+                      ? _buildUserSearchResults()
+                      : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildFriendRequests(),
+                          _buildSentFriendRequests(),
+                        ],
+                      ),
             ),
           ],
         ),
@@ -91,13 +92,13 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   Widget _buildUserSearchResults() {
     return StreamBuilder<QuerySnapshot>(
       stream:
-      FirebaseFirestore.instance
-          .collection('users')
-          .orderBy('username')
-      //.where(searchText, isGreaterThanOrEqualTo: true)
-          .startAt([searchText])
-          .endAt([searchText + '\uf8ff'])
-          .snapshots(),
+          FirebaseFirestore.instance
+              .collection('users')
+              .orderBy('username')
+              //.where(searchText, isGreaterThanOrEqualTo: true)
+              .startAt([searchText])
+              .endAt([searchText + '\uf8ff'])
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator());
@@ -109,15 +110,15 @@ class _AddFriendScreenState extends State<AddFriendScreen>
 
         return FutureBuilder<DocumentSnapshot>(
           future:
-          FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser!.uid)
-              .get(),
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser!.uid)
+                  .get(),
           builder: (context, currentUserSnapshot) {
             if (!currentUserSnapshot.hasData) return const SizedBox();
 
             final currentUserData =
-            currentUserSnapshot.data!.data() as Map<String, dynamic>?;
+                currentUserSnapshot.data!.data() as Map<String, dynamic>?;
             final sentList = List<String>.from(
               currentUserData?['friend_requests_sent'] ?? [],
             );
@@ -133,6 +134,7 @@ class _AddFriendScreenState extends State<AddFriendScreen>
               itemBuilder: (context, index) {
                 final user = users[index];
                 final userId = user.id;
+                final userData = user.data() as Map<String, dynamic>;
 
                 if (userId == currentUser!.uid) return const SizedBox.shrink();
 
@@ -143,35 +145,46 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundImage:
-                        (user.data() as Map<String, dynamic>).containsKey('profileImage') &&
-                        user['profileImage'] != null
-                            ? NetworkImage(user['profileImage'])
+                        userData.containsKey('profileImage') &&
+                                user['profileImage'] != null
+                            ? NetworkImage(userData['profileImage'])
                             : AssetImage('assets/images/user_placeholder.jpg')
                                 as ImageProvider,
                   ),
-                  title: Text(user['username'] ?? 'No username'),
-                  trailing:
-                  isFriend
-                      ? ElevatedButton(
-                    onPressed: null,
-                    child: const Text('Friends'),
-                  )
-                      : isReceieved
-                      ? _buildRespondButton(userId, user['username'])
-                      : ElevatedButton(
-                    onPressed:
-                        () =>
-                    isSent
-                        ? _cancelFriendRequest(
-                      userId,
-                      user['username'],
-                    )
-                        : _sendFriendRequest(
-                      userId,
-                      user['username'],
-                    ),
-                    child: Text(isSent ? 'Cancel' : 'Add'),
+                  title: InkWell(
+                    child: Text(user['username'] ?? 'No username'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => UserProfileScreen(user: userData),
+                        ),
+                      );
+                    },
                   ),
+                  trailing:
+                      isFriend
+                          ? ElevatedButton(
+                            onPressed: null,
+                            child: const Text('Friends'),
+                          )
+                          : isReceieved
+                          ? _buildRespondButton(userId, user['username'])
+                          : ElevatedButton(
+                            onPressed:
+                                () =>
+                                    isSent
+                                        ? _cancelFriendRequest(
+                                          userId,
+                                          user['username'],
+                                        )
+                                        : _sendFriendRequest(
+                                          userId,
+                                          user['username'],
+                                        ),
+                            child: Text(isSent ? 'Cancel' : 'Add'),
+                          ),
                 );
               },
             );
@@ -184,10 +197,10 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   Widget _buildFriendRequests() {
     return StreamBuilder<DocumentSnapshot>(
       stream:
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser!.uid)
-          .snapshots(),
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser!.uid)
+              .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
@@ -205,16 +218,16 @@ class _AddFriendScreenState extends State<AddFriendScreen>
 
             return FutureBuilder<DocumentSnapshot>(
               future:
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(senderId)
-                  .get(),
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(senderId)
+                      .get(),
               builder: (context, senderSnapshot) {
                 if (!senderSnapshot.hasData)
                   return const ListTile(title: Text('Loading...'));
 
                 final senderData =
-                senderSnapshot.data!.data() as Map<String, dynamic>?;
+                    senderSnapshot.data!.data() as Map<String, dynamic>;
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -223,26 +236,37 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                           'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg',
                     ),
                   ),
-                  title: Text(senderData?['username'] ?? 'No name'),
+                  title: InkWell(
+                    child: Text(senderData?['username'] ?? 'No name'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => UserProfileScreen(user: senderData),
+                        ),
+                      );
+                    },
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ElevatedButton(
                         onPressed:
                             () => _acceptFriendRequest(
-                          senderId,
-                          senderData?['username'] ?? '',
-                        ),
+                              senderId,
+                              senderData?['username'] ?? '',
+                            ),
                         child: const Text('Accept'),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed:
                             () => _cancelReceivedRequest(
-                          senderId,
-                          senderData?['username'] ?? '',
-                        ),
-                        child: const Text('Cancel'),
+                              senderId,
+                              senderData?['username'] ?? '',
+                            ),
+                        child: const Text('Delete'),
                       ),
                     ],
                   ),
@@ -256,12 +280,12 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Widget _buildSentFriendRequests() {
-    return FutureBuilder<DocumentSnapshot>(
-      future:
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser!.uid)
-          .get(),
+    return StreamBuilder<DocumentSnapshot>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser!.uid)
+              .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData)
           return const Center(child: CircularProgressIndicator());
@@ -279,16 +303,16 @@ class _AddFriendScreenState extends State<AddFriendScreen>
 
             return FutureBuilder<DocumentSnapshot>(
               future:
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(receiverId)
-                  .get(),
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(receiverId)
+                      .get(),
               builder: (context, receiverSnapshot) {
                 if (!receiverSnapshot.hasData)
                   return const ListTile(title: Text('Loading...'));
 
                 final receiverData =
-                receiverSnapshot.data!.data() as Map<String, dynamic>?;
+                    receiverSnapshot.data!.data() as Map<String, dynamic>;
 
                 return ListTile(
                   leading: CircleAvatar(
@@ -297,13 +321,25 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                           'https://res.cloudinary.com/ddfycczdx/image/upload/v1750106503/xqyhfxyryfeykfxozxcr.jpg',
                     ),
                   ),
-                  title: Text(receiverData?['username'] ?? 'No name'),
+                  title: InkWell(
+                    child: Text(receiverData?['username'] ?? 'No name'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  UserProfileScreen(user: receiverData),
+                        ),
+                      );
+                    },
+                  ),
                   trailing: OutlinedButton(
                     onPressed:
                         () => _cancelFriendRequest(
-                      receiverId,
-                      receiverData?['username'] ?? '',
-                    ),
+                          receiverId,
+                          receiverData?['username'] ?? '',
+                        ),
                     child: const Text('Cancel'),
                   ),
                 );
@@ -316,9 +352,9 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _sendFriendRequest(
-      String receiverId,
-      String receiverUsername,
-      ) async {
+    String receiverId,
+    String receiverUsername,
+  ) async {
     if (currentUser == null || receiverId == currentUser!.uid) return;
 
     final senderId = currentUser!.uid;
@@ -348,9 +384,9 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _cancelFriendRequest(
-      String receiverId,
-      String receiverUsername,
-      ) async {
+    String receiverId,
+    String receiverUsername,
+  ) async {
     if (currentUser == null) return;
 
     final senderId = currentUser!.uid;
@@ -382,9 +418,9 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _cancelReceivedRequest(
-      String senderId,
-      String senderUsername,
-      ) async {
+    String senderId,
+    String senderUsername,
+  ) async {
     if (currentUser == null) return;
 
     final receiverId = currentUser!.uid;
@@ -416,9 +452,9 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _acceptFriendRequest(
-      String senderId,
-      String senderUsername,
-      ) async {
+    String senderId,
+    String senderUsername,
+  ) async {
     if (currentUser == null) return;
 
     final receiverId = currentUser!.uid;
@@ -463,15 +499,15 @@ class _AddFriendScreenState extends State<AddFriendScreen>
       },
       itemBuilder:
           (context) => [
-        PopupMenuItem(value: 'accept', child: Text('Accept')),
-        PopupMenuItem(value: 'delete', child: Text('Delete')),
-      ],
+            PopupMenuItem(value: 'accept', child: Text('Accept')),
+            PopupMenuItem(value: 'delete', child: Text('Delete')),
+          ],
       child: Builder(
         builder: (context) {
           final ButtonStyle defaultStyle = ElevatedButton.styleFrom();
           final Color foregroundColor =
               defaultStyle.backgroundColor?.resolve({}) ??
-                  Theme.of(context).colorScheme.primary;
+              Theme.of(context).colorScheme.primary;
           final Color backgroundColor =
               defaultStyle.foregroundColor?.resolve({}) ?? Colors.white;
 
