@@ -46,6 +46,7 @@ dependencies:
   fluttertoast: ^8.2.2
   file_picker: ^9.0.2
   image_picker: ^1.1.2
+  timeago: ^3.5.0
   intl: ^0.18.1
   http: ^0.13.6
   cached_network_image: ^3.3.1
