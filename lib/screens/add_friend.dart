@@ -91,14 +91,10 @@ class _AddFriendScreenState extends State<AddFriendScreen>
 
   Widget _buildUserSearchResults() {
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('users')
-              .orderBy('username')
-              //.where(searchText, isGreaterThanOrEqualTo: true)
-              .startAt([searchText])
-              .endAt([searchText + '\uf8ff'])
-              .snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .orderBy('username')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator());
@@ -106,28 +102,32 @@ class _AddFriendScreenState extends State<AddFriendScreen>
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
           return const Center(child: Text('No users found.'));
 
-        final users = snapshot.data!.docs;
+        // Client-side filtering (case-insensitive)
+        final users = snapshot.data!.docs.where((doc) {
+          final username = (doc['username'] ?? '') as String;
+          return username.toLowerCase().contains(searchText.toLowerCase());
+        }).toList();
+
+        if (users.isEmpty) {
+          return const Center(child: Text('No users found.'));
+        }
 
         return FutureBuilder<DocumentSnapshot>(
-          future:
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser!.uid)
-                  .get(),
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser!.uid)
+              .get(),
           builder: (context, currentUserSnapshot) {
             if (!currentUserSnapshot.hasData) return const SizedBox();
 
             final currentUserData =
-                currentUserSnapshot.data!.data() as Map<String, dynamic>?;
-            final sentList = List<String>.from(
-              currentUserData?['friend_requests_sent'] ?? [],
-            );
-            final friendList = List<String>.from(
-              currentUserData?['friends'] ?? [],
-            );
-            final receivedList = List<String>.from(
-              currentUserData?['friend_requests'] ?? [],
-            );
+            currentUserSnapshot.data!.data() as Map<String, dynamic>?;
+            final sentList =
+            List<String>.from(currentUserData?['friend_requests_sent'] ?? []);
+            final friendList =
+            List<String>.from(currentUserData?['friends'] ?? []);
+            final receivedList =
+            List<String>.from(currentUserData?['friend_requests'] ?? []);
 
             return ListView.builder(
               itemCount: users.length,
@@ -140,16 +140,15 @@ class _AddFriendScreenState extends State<AddFriendScreen>
 
                 final isSent = sentList.contains(userId);
                 final isFriend = friendList.contains(userId);
-                final isReceieved = receivedList.contains(userId);
+                final isReceived = receivedList.contains(userId);
 
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage:
-                        userData.containsKey('profileImage') &&
-                                user['profileImage'] != null
-                            ? NetworkImage(userData['profileImage'])
-                            : AssetImage('assets/images/user_placeholder.jpg')
-                                as ImageProvider,
+                    backgroundImage: userData.containsKey('profileImage') &&
+                        user['profileImage'] != null
+                        ? NetworkImage(userData['profileImage'])
+                        : const AssetImage('assets/images/user_placeholder.jpg')
+                    as ImageProvider,
                   ),
                   title: InkWell(
                     child: Text(user['username'] ?? 'No username'),
@@ -157,34 +156,27 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder:
-                              (context) => UserProfileScreen(user: userData),
+                          builder: (context) =>
+                              UserProfileScreen(user: userData),
                         ),
                       );
                     },
                   ),
-                  trailing:
-                      isFriend
-                          ? ElevatedButton(
-                            onPressed: null,
-                            child: const Text('Friends'),
-                          )
-                          : isReceieved
-                          ? _buildRespondButton(userId, user['username'])
-                          : ElevatedButton(
-                            onPressed:
-                                () =>
-                                    isSent
-                                        ? _cancelFriendRequest(
-                                          userId,
-                                          user['username'],
-                                        )
-                                        : _sendFriendRequest(
-                                          userId,
-                                          user['username'],
-                                        ),
-                            child: Text(isSent ? 'Cancel' : 'Add'),
-                          ),
+                  trailing: isFriend
+                      ? const ElevatedButton(
+                    onPressed: null,
+                    child: Text('Friends'),
+                  )
+                      : isReceived
+                      ? _buildRespondButton(userId, user['username'])
+                      : ElevatedButton(
+                    onPressed: () => isSent
+                        ? _cancelFriendRequest(
+                        userId, user['username'])
+                        : _sendFriendRequest(
+                        userId, user['username']),
+                    child: Text(isSent ? 'Cancel' : 'Add'),
+                  ),
                 );
               },
             );
@@ -193,6 +185,7 @@ class _AddFriendScreenState extends State<AddFriendScreen>
       },
     );
   }
+
 
   Widget _buildFriendRequests() {
     return StreamBuilder<DocumentSnapshot>(
@@ -352,18 +345,14 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _sendFriendRequest(
-    String receiverId,
-    String receiverUsername,
-  ) async {
+      String receiverId,
+      String receiverUsername,
+      ) async {
     if (currentUser == null || receiverId == currentUser!.uid) return;
 
     final senderId = currentUser!.uid;
-    final senderRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(senderId);
-    final receiverRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(receiverId);
+    final senderRef = FirebaseFirestore.instance.collection('users').doc(senderId);
+    final receiverRef = FirebaseFirestore.instance.collection('users').doc(receiverId);
 
     try {
       await senderRef.update({
@@ -373,15 +362,36 @@ class _AddFriendScreenState extends State<AddFriendScreen>
         'friend_requests': FieldValue.arrayUnion([senderId]),
       });
 
+      final senderSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(senderId)
+          .get();
+
+      final senderUsername = senderSnapshot.data()?['username'] ?? 'Someone';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(receiverId)
+          .collection('notifications')
+          .add({
+        'type': 'friend_request',
+        'senderId': senderId,
+        'message': '$senderUsername sent you a friend request!',
+        'timestamp': FieldValue.serverTimestamp(),
+        'seen': false,
+      });
+
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Request sent to $receiverUsername')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error sending request: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending request: $e')),
+      );
     }
   }
+
 
   Future<void> _cancelFriendRequest(
     String receiverId,
@@ -452,18 +462,14 @@ class _AddFriendScreenState extends State<AddFriendScreen>
   }
 
   Future<void> _acceptFriendRequest(
-    String senderId,
-    String senderUsername,
-  ) async {
+      String senderId,
+      String senderUsername,
+      ) async {
     if (currentUser == null) return;
 
     final receiverId = currentUser!.uid;
-    final receiverRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(receiverId);
-    final senderRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(senderId);
+    final receiverRef = FirebaseFirestore.instance.collection('users').doc(receiverId);
+    final senderRef = FirebaseFirestore.instance.collection('users').doc(senderId);
 
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
@@ -478,15 +484,36 @@ class _AddFriendScreenState extends State<AddFriendScreen>
         });
       });
 
+      final receiverSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(receiverId)
+          .get();
+
+      final receiverUsername = receiverSnapshot.data()?['username'] ?? 'Someone';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(senderId)
+          .collection('notifications')
+          .add({
+        'type': 'friend_acceptance',
+        'senderId': receiverId,
+        'message': '$receiverUsername accepted your friend request!',
+        'timestamp': FieldValue.serverTimestamp(),
+        'seen': false,
+      });
+
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You and $senderUsername are now friends!')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
+
 
   Widget _buildRespondButton(String userId, String username) {
     return PopupMenuButton<String>(

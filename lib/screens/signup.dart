@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_connect/screens/login.dart';
-import 'home.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,6 +17,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
 
   bool _obscureText = true;
   bool _isSigningUp = false;
@@ -27,6 +28,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+
     super.dispose();
   }
 
@@ -37,6 +40,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isValidPassword(String password) {
     return password.length >= 6;
   }
+  bool _isStrongPassword(String password) {
+    return password.length >= 6 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&       // at least 1 uppercase
+        RegExp(r'[a-z]').hasMatch(password) &&       // at least 1 lowercase
+        RegExp(r'\d').hasMatch(password) &&          // at least 1 digit
+        RegExp(r'[!@#\$&*~%^()_+={}\[\]').hasMatch(password); // at least 1 special char
+    }
 
   Future<void> _signUp() async {
     String username = _usernameController.text.trim();
@@ -56,6 +66,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       return;
     }
+    String confirmPassword = _confirmPasswordController.text.trim();
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
+
+    if (!_isStrongPassword(password)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Password must contain uppercase, lowercase, number and special character")),
+      );
+      return;
+    }
+
 
     if (!_isValidPassword(password)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -100,7 +126,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (user != null) {
         // 🔐 Send email verification
-        await user.sendEmailVerification(); // ✅ <--- Added
+        await user.sendEmailVerification();
 
         await _firestore.collection("users").doc(user.uid).set({
           "username": username,
@@ -113,8 +139,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _isSigningUp = false;
         });
 
-        // 📨 Notify user to check email
-        showDialog( // ✅ <--- Added
+        showDialog( //
           context: context,
           barrierDismissible: false,
           builder: (context) {
@@ -257,6 +282,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
             ),
+            SizedBox(height: 10),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: _obscureText,
+              decoration: InputDecoration(
+                labelText: "Confirm Password",
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
+                ),
+              ),
+            ),
+
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _isSigningUp ? null : _signUp,

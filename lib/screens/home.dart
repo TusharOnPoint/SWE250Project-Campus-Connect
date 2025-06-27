@@ -23,7 +23,9 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => NotificationsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => NotificationScreen(userId: FirebaseAuth.instance.currentUser!.uid),
+                ),
               );
             },
           ),
