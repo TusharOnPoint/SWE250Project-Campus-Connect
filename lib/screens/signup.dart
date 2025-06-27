@@ -48,7 +48,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         RegExp(r'[A-Z]').hasMatch(password) &&       // at least 1 uppercase
         RegExp(r'[a-z]').hasMatch(password) &&       // at least 1 lowercase
         RegExp(r'\d').hasMatch(password) &&          // at least 1 digit
-        RegExp(r'[!@#\$&*~%^()_+={}\[\]').hasMatch(password); // at least 1 special char
+        RegExp(r'[^a-zA-Z0-9]').hasMatch(password); // at least 1 special char
     }
 
   Future<void> _signUp() async {
