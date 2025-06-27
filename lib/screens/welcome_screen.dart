@@ -16,7 +16,7 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/logo.png', height: 150),
+              Image.asset('assets/images/welcome_logo.png', height: 150,width:200,),
               SizedBox(height: 20),
               Text(
                 "Campus Connect",
