@@ -27,7 +27,7 @@ class _UserInfoFormState extends State<UserInfoForm> {
   final List<String> courses = ['Bachelors', 'Masters'];
   final List<String> years = ['1st', '2nd', '3rd', '4th'];
   final List<String> semesters = ['1st', '2nd'];
-  final List<String> universities = ['BUET', 'DU', 'NSU', 'BRAC', 'RUET'];
+  final List<String> universities = ['BUET', 'DU', 'NSU', 'BRAC', 'RUET','SUST'];
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {

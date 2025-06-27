@@ -26,7 +26,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final List<String> courses = ['Bachelors', 'Masters'];
   final List<String> years = ['1st', '2nd', '3rd', '4th'];
   final List<String> semesters = ['1st', '2nd','3rd'];
-  final List<String> universities = ['BUET', 'DU', 'NSU', 'BRAC', 'RUET',''];
+  final List<String> universities = ['BUET', 'DU', 'NSU', 'BRAC', 'RUET','SUST'];
 
   @override
   void initState() {
