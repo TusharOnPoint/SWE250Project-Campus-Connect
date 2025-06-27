@@ -8,14 +8,15 @@ import 'package:video_player/video_player.dart';
 class PostCard extends StatefulWidget {
   final DocumentSnapshot postDoc;
   final String currentUserId;
-  final isNavigate;
-  bool navigateToUserProfile;
+  final bool isNavigate;
+  final bool navigateToUserProfile;
 
-  PostCard({
+  const PostCard({
     super.key,
     required this.postDoc,
     required this.currentUserId,
-    this.isNavigate = true, this.navigateToUserProfile=true,
+    this.isNavigate = true,
+    this.navigateToUserProfile = true,
   });
 
   @override
@@ -27,17 +28,21 @@ class _PostCardState extends State<PostCard> {
   bool isLiked = false;
   VideoPlayerController? _videoController;
 
+  // text expand / collapse
+  bool _isTextExpanded = false;
+  static const _previewMaxLines = 3;
+  static const _previewCutoff = 150; // characters
+
   @override
   void initState() {
     super.initState();
     postData = widget.postDoc.data()! as Map<String, dynamic>;
     isLiked = (postData['likes'] as List).contains(widget.currentUserId);
 
-    if (postData['mediaType'] == 'video' && (postData['mediaUrl'] ?? '').isNotEmpty) {
+    if (postData['mediaType'] == 'video' &&
+        (postData['mediaUrl'] ?? '').isNotEmpty) {
       _videoController = VideoPlayerController.network(postData['mediaUrl'])
-        ..initialize().then((_) {
-          setState(() {});
-        });
+        ..initialize().then((_) => setState(() {}));
     }
   }
 
@@ -47,34 +52,33 @@ class _PostCardState extends State<PostCard> {
     super.dispose();
   }
 
-  void _toggleLike() async {
+  // like / unlike
+
+  Future<void> _toggleLike() async {
     final postRef = widget.postDoc.reference;
     final wasLiked = isLiked;
-    final likesList = List<String>.from(postData['likes']);
+    final originalLikes = List<String>.from(postData['likes']);
 
     setState(() {
       isLiked = !wasLiked;
-      if (!wasLiked) {
-        postData['likes'].add(widget.currentUserId);
-      } else {
-        postData['likes'].remove(widget.currentUserId);
-      }
+      wasLiked
+          ? postData['likes'].remove(widget.currentUserId)
+          : postData['likes'].add(widget.currentUserId);
     });
 
     try {
       await postRef.update({
-        'likes': !wasLiked
-            ? FieldValue.arrayUnion([widget.currentUserId])
-            : FieldValue.arrayRemove([widget.currentUserId])
+        'likes': wasLiked
+            ? FieldValue.arrayRemove([widget.currentUserId])
+            : FieldValue.arrayUnion([widget.currentUserId]),
       });
 
-      // Send notification only if it was a like (not unlike)
       if (!wasLiked && widget.currentUserId != postData['authorId']) {
-        final currentUserDoc = await FirebaseFirestore.instance
+        final me = await FirebaseFirestore.instance
             .collection('users')
             .doc(widget.currentUserId)
             .get();
-        final username = currentUserDoc.data()?['username'] ?? 'Someone';
+        final username = me.data()?['username'] ?? 'Someone';
 
         await FirebaseFirestore.instance
             .collection('users')
@@ -90,9 +94,10 @@ class _PostCardState extends State<PostCard> {
         });
       }
     } catch (e) {
+      // roll back UI on failure
       setState(() {
         isLiked = wasLiked;
-        postData['likes'] = likesList;
+        postData['likes'] = originalLikes;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update like. Please try again.')),
@@ -100,6 +105,40 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  // expandable text widget
+
+  Widget _buildPostText(String text) {
+    final isLong = text.length > _previewCutoff;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          text,
+          maxLines: _isTextExpanded ? null : _previewMaxLines,
+          overflow:
+              _isTextExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 15),
+        ),
+        if (isLong)
+          GestureDetector(
+            onTap: () => setState(() => _isTextExpanded = !_isTextExpanded),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                _isTextExpanded ? 'Show less' : 'Show more',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // build
 
   @override
   Widget build(BuildContext context) {
@@ -110,33 +149,38 @@ class _PostCardState extends State<PostCard> {
       future: UserService.getUserDataByUid(postData['authorId']),
       builder: (context, snapshot) {
         final author = snapshot.data;
-        final authorId = author?['uid'] ?? 'Unknown';
-        //print(authorId);
         final authorName = author?['username'] ?? 'Unknown';
         final profileImage = author?['profileImage'] ?? '';
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 3,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // header
               ListTile(
                 leading: CircleAvatar(
                   backgroundImage: profileImage.isNotEmpty
                       ? NetworkImage(profileImage)
-                      : const AssetImage('assets/images/profile_placeholder.jpg') as ImageProvider,
+                      : const AssetImage(
+                              'assets/images/profile_placeholder.jpg')
+                          as ImageProvider,
                 ),
                 title: InkWell(
                   child: Text(authorName),
                   onTap: () {
-                    if(author!=null&&widget.navigateToUserProfile){
-                      Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => UserProfileScreen(user: author,),));
+                    if (author != null && widget.navigateToUserProfile) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => UserProfileScreen(user: author),
+                        ),
+                      );
                     }
-
                   },
                 ),
                 subtitle: timestamp != null
@@ -148,21 +192,26 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-              // Media
+              // media
               if ((postData['mediaUrl'] ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: postData['mediaType'] == 'video'
-                        ? (_videoController != null && _videoController!.value.isInitialized
+                        ? (_videoController != null &&
+                                _videoController!.value.isInitialized
                             ? AspectRatio(
-                                aspectRatio: _videoController!.value.aspectRatio,
+                                aspectRatio:
+                                    _videoController!.value.aspectRatio,
                                 child: Stack(
                                   alignment: Alignment.bottomCenter,
                                   children: [
                                     VideoPlayer(_videoController!),
-                                    VideoProgressIndicator(_videoController!, allowScrubbing: true),
+                                    VideoProgressIndicator(
+                                      _videoController!,
+                                      allowScrubbing: true,
+                                    ),
                                     Positioned(
                                       bottom: 10,
                                       left: 10,
@@ -181,26 +230,27 @@ class _PostCardState extends State<PostCard> {
                                           });
                                         },
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               )
                             : const SizedBox(
                                 height: 200,
-                                child: Center(child: CircularProgressIndicator()),
+                                child:
+                                    Center(child: CircularProgressIndicator()),
                               ))
                         : Image.network(postData['mediaUrl']),
                   ),
                 ),
 
-              // Text
+              // text
               if ((postData['text'] ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: Text(postData['text']),
+                  child: _buildPostText(postData['text']),
                 ),
 
-              // Like & Comment Buttons
+              // like & comment row
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
@@ -218,27 +268,31 @@ class _PostCardState extends State<PostCard> {
                         Text('$likeCount'),
                       ],
                     ),
-                    SizedBox(width: 20,),
+                    const SizedBox(width: 20),
                     GestureDetector(
-                      onTap: widget.isNavigate ?  () {
-                        Navigator.pushNamed(
-                          context,
-                          '/postDetail',
-                          arguments: {
-                            'postDoc': widget.postDoc,
-                            'currentUserId': widget.currentUserId,
-                          },
-                        );
-                      } : () {},
+                      onTap: widget.isNavigate
+                          ? () {
+                              Navigator.pushNamed(
+                                context,
+                                '/postDetail',
+                                arguments: {
+                                  'postDoc': widget.postDoc,
+                                  'currentUserId': widget.currentUserId,
+                                },
+                              );
+                            }
+                          : null,
                       child: Row(
                         children: [
                           const Icon(Icons.comment_outlined),
                           const SizedBox(width: 4),
                           StreamBuilder<QuerySnapshot>(
-                            stream: widget.postDoc.reference.collection('comments').snapshots(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) return const Text('...');
-                              return Text('${snapshot.data!.docs.length}');
+                            stream: widget.postDoc.reference
+                                .collection('comments')
+                                .snapshots(),
+                            builder: (context, snap) {
+                              if (!snap.hasData) return const Text('...');
+                              return Text('${snap.data!.docs.length}');
                             },
                           ),
                         ],

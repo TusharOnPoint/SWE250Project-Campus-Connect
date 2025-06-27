@@ -1,7 +1,6 @@
 import 'package:campus_connect/widgets/postCard.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:campus_connect/widgets/comment_card.dart';
 
 class PostDetailScreen extends StatefulWidget {
@@ -26,21 +25,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
-    final commentRef = await widget.postDoc.reference.collection('comments').add({
-      'text': text,
-      'userId': widget.currentUserId,
-      'timestamp': Timestamp.now(),
-    });
+    final commentRef = await widget.postDoc.reference
+        .collection('comments')
+        .add({
+          'text': text,
+          'userId': widget.currentUserId,
+          'timestamp': Timestamp.now(),
+        });
 
     _commentController.clear();
 
     // Send notification to the post author if commenter is not the author
     final postAuthorId = widget.postDoc['authorId'];
     if (widget.currentUserId != postAuthorId) {
-      final currentUserDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.currentUserId)
-          .get();
+      final currentUserDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.currentUserId)
+              .get();
       final username = currentUserDoc.data()?['username'] ?? 'Someone';
 
       await FirebaseFirestore.instance
@@ -48,13 +50,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           .doc(postAuthorId)
           .collection('notifications')
           .add({
-        'type': 'comment',
-        'senderId': widget.currentUserId,
-        'postId': widget.postDoc.id,
-        'message': '$username commented on your post.',
-        'timestamp': FieldValue.serverTimestamp(),
-        'seen': false,
-      });
+            'type': 'comment',
+            'senderId': widget.currentUserId,
+            'postId': widget.postDoc.id,
+            'message': '$username commented on your post.',
+            'timestamp': FieldValue.serverTimestamp(),
+            'seen': false,
+          });
     }
   }
 
@@ -84,22 +86,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
+
                     final comments = snapshot.data!.docs;
-                    return Column(
-                      children:
-                          comments.map((doc) {
-                            return CommentCard(
-                              commentDoc: doc,
-                              currentUserId: widget.currentUserId,
-                              postAuthorId: widget.postDoc['authorId'],
-                            );
-                          }).toList(),
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: comments.length,
+                      itemBuilder: (context, index) {
+                        final doc = comments[index];
+                        return CommentCard(
+                          key: ValueKey(doc.id),
+                          commentDoc: doc,
+                          currentUserId: widget.currentUserId,
+                          postAuthorId: widget.postDoc['authorId'],
+                        );
+                      },
                     );
                   },
                 ),
               ],
             ),
           ),
+
+          // comment field
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
