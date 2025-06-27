@@ -20,6 +20,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _userNameFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
 
@@ -271,8 +272,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               controller: _passwordController,
               obscureText: _obscureText,
               focusNode: _passwordFocus,
-              onSubmitted:(_) => _passwordFocus.unfocus(),
-              textInputAction: TextInputAction.done,
+              onSubmitted:(_) => _confirmPasswordFocus.requestFocus(),
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: "Password",
                 border: OutlineInputBorder(
@@ -297,7 +298,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
             SizedBox(height: 10),
             TextField(
               controller: _confirmPasswordController,
+              focusNode: _confirmPasswordFocus,
               obscureText: _obscureText,
+              onSubmitted: (_) => _confirmPasswordFocus.unfocus(),
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 labelText: "Confirm Password",
                 border: OutlineInputBorder(
