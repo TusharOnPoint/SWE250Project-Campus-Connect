@@ -53,8 +53,23 @@ class _UserInfoFormState extends State<UserInfoForm> {
     }
   }
 
-  void _skip() {
-    Navigator.pushReplacementNamed(context, '/home');
+  Future<void> _skip() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'name': name,
+        'gender': gender,
+        'department': department,
+        'course': course,
+        'year': year,
+        'semester': semester,
+        'university': university,
+        'skills': skills,
+        'workplace': workplace,
+        'isProfileUpdated': true,
+      });
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
 
   @override
