@@ -23,11 +23,11 @@ class _UserInfoFormState extends State<UserInfoForm> {
   String? workplace;
 
   final List<String> genders = ['Male', 'Female', 'Other'];
-  final List<String> departments = ['CSE', 'EEE', 'BBA', 'LLB'];
+  final List<String> departments = ['SWE', 'CSE', 'EEE', 'BBA', 'LLB'];
   final List<String> courses = ['Bachelors', 'Masters'];
   final List<String> years = ['1st', '2nd', '3rd', '4th'];
-  final List<String> semesters = ['1st', '2nd'];
-  final List<String> universities = ['BUET', 'DU', 'NSU', 'BRAC', 'RUET','SUST'];
+  final List<String> semesters = ['1st', '2nd', '3rd'];
+  final List<String> universities = ['SUST', 'BUET', 'DU', 'NSU', 'BRAC', 'RUET'];
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
