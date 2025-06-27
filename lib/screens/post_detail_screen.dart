@@ -8,9 +8,12 @@ class PostDetailScreen extends StatefulWidget {
     super.key,
     required this.postDoc,
     required this.currentUserId,
+    this.navigateToUserProfile = true,
   });
   final DocumentSnapshot postDoc;
   final String currentUserId;
+  
+  final bool navigateToUserProfile;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -74,6 +77,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   postDoc: widget.postDoc,
                   currentUserId: widget.currentUserId,
                   isNavigate: false,
+                  navigateToUserProfile: widget.navigateToUserProfile,
                 ),
                 const Divider(),
                 StreamBuilder<QuerySnapshot>(
@@ -100,6 +104,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           commentDoc: doc,
                           currentUserId: widget.currentUserId,
                           postAuthorId: widget.postDoc['authorId'],
+                          navigateToUserProfile: widget.navigateToUserProfile,
                         );
                       },
                     );

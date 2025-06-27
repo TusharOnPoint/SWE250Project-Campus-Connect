@@ -278,6 +278,7 @@ class _PostCardState extends State<PostCard> {
                                 arguments: {
                                   'postDoc': widget.postDoc,
                                   'currentUserId': widget.currentUserId,
+                                  'navigateToUserProfile' : widget.navigateToUserProfile,
                                 },
                               );
                             }

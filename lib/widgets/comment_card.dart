@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,12 +7,15 @@ class CommentCard extends StatefulWidget {
   final DocumentSnapshot commentDoc;
   final String currentUserId;
   final String postAuthorId;
+  
+  bool navigateToUserProfile;
 
-  const CommentCard({
+  CommentCard({
     super.key,
     required this.commentDoc,
     required this.currentUserId,
     required this.postAuthorId,
+    this.navigateToUserProfile = true,
   });
 
   @override
@@ -23,6 +27,7 @@ class _CommentCardState extends State<CommentCard> {
   late String authorId;
   late bool isCommentAuthor;
   late bool isPostAuthor;
+  Map<String, dynamic> authorData = {};
   String authorName = 'User';
   String? profilePicUrl;
 
@@ -41,6 +46,7 @@ class _CommentCardState extends State<CommentCard> {
     if (doc.exists) {
       final userData = doc.data()!;
       setState(() {
+        authorData = userData;
         authorName = userData['username'] ?? 'User';
         profilePicUrl = userData['profileImage'];
       });
@@ -119,11 +125,23 @@ class _CommentCardState extends State<CommentCard> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              authorName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                            InkWell(
+                              onTap: () {
+                    if (authorData != null && widget.navigateToUserProfile) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => UserProfileScreen(user: authorData),
+                        ),
+                      );
+                    }
+                  },
+                              child: Text(
+                                authorName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                             if (isCommentAuthor || isPostAuthor)
@@ -159,7 +177,7 @@ class _CommentCardState extends State<CommentCard> {
                         const SizedBox(height: 6),
 
                         /// Comment text
-                        Text(
+                        SelectableText(
                           text,
                           style: const TextStyle(fontSize: 14),
                         ),

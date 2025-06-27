@@ -16,14 +16,14 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/welcome_logo.png', height: 150,width:200,),
-              SizedBox(height: 20),
+              Image.asset('assets/images/welcome_logo.png', height: 250,width:300, fit: BoxFit.fill,),
+              //SizedBox(height: 5),
               Text(
                 "Campus Connect",
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: const Color.fromARGB(255, 18, 53, 129),
                 ),
               ),
               SizedBox(height: 40),
