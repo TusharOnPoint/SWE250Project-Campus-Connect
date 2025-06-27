@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home.dart';
 import 'forgot_password.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,6 +10,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+
   bool _obscureText = true;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String _errorMessage = "";
@@ -49,10 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text("Login Successful!")));
-          Navigator.pushReplacementNamed(
-            context,
-            '/home',
-          );
+          Navigator.pushReplacementNamed(context, '/home');
         } else {
           showDialog(
             context: context,
@@ -74,11 +73,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           try {
                             await user.sendEmailVerification();
                             ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                "Verification email sent. Check your inbox.",
+                              SnackBar(
+                                content: Text(
+                                  "Verification email sent. Check your inbox.",
+                                ),
                               ),
-                            ),
                             );
                             await FirebaseAuth.instance.signOut();
                             print("signout after sending email");
@@ -86,8 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.pop(context);
                           }
                           // Close dialog
-                          catch (e){
-                            print("Error sending verification email: ${e.toString()}");
+                          catch (e) {
+                            print(
+                              "Error sending verification email: ${e.toString()}",
+                            );
                             Navigator.pop(context); // Close dialog
                             await FirebaseAuth.instance.signOut();
                             print("signout after failing to send email");
@@ -152,7 +153,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Login With SUST Email"),
-        backgroundColor: Colors.blue,
         centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
@@ -174,6 +174,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: 20),
             TextField(
+              focusNode: _emailFocus,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _passwordFocus.requestFocus(),
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: "Email",
@@ -190,7 +193,12 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             SizedBox(height: 20),
             TextField(
+              focusNode: _passwordFocus,
               controller: _passwordController,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                _passwordFocus.unfocus();
+              },
               obscureText: _obscureText,
               decoration: InputDecoration(
                 labelText: "Password",

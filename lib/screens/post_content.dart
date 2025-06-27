@@ -1,6 +1,7 @@
-import 'dart:io' show File;
-import 'dart:html' as html;  
+import 'package:universal_io/io.dart' show File;        // cross-platform File
+import 'package:universal_html/html.dart' as html;      // cross-platform html.*
 import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
@@ -21,12 +22,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _textController = TextEditingController();
 
   FilePickerResult? _selectedFile;
-  String? _fileType;   
+  String? _fileType;
 
   VideoPlayerController? _videoController;
-  Future<void>? _videoInit; 
+  Future<void>? _videoInit;
   String? _webBlobUrl;
   bool _isLoading = false;
+
+  /* ─────────────────── pick image / video ─────────────────── */
 
   Future<void> _pickMedia() async {
     final result = await FilePicker.platform.pickFiles(
@@ -39,7 +42,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (result == null || result.files.single.path == null) return;
 
     final ext = result.files.single.extension!.toLowerCase();
-    _disposeVideo();   
+    _disposeVideo();
 
     setState(() {
       _selectedFile = result;
@@ -48,17 +51,19 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     if (_fileType == 'video') {
       await _setupVideo(result.files.single);
-      setState(() {});
+      setState(() {}); // redraw once video is ready
     }
   }
+
+  /* ─────────────────── setup video controller ─────────────────── */
 
   Future<void> _setupVideo(PlatformFile file) async {
     _disposeVideo();
 
     if (kIsWeb) {
-      // Turn bytes into an object-URL so the <video> element can load it.
+      // Turn the bytes into an object-URL for the <video> element.
       final Uint8List bytes = file.bytes!;
-      final blob = html.Blob([bytes]);
+      final blob = html.Blob(<Uint8List>[bytes]);
       _webBlobUrl = html.Url.createObjectUrlFromBlob(blob);
       _videoController = VideoPlayerController.network(_webBlobUrl!);
     } else {
@@ -81,6 +86,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       _webBlobUrl = null;
     }
   }
+
+  /* ─────────────────── create Firestore post ─────────────────── */
 
   Future<void> _createPost() async {
     if (_textController.text.trim().isEmpty && _selectedFile == null) return;
@@ -124,6 +131,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (context.mounted) Navigator.pop(context);
   }
 
+  /* ─────────────────── media preview widget ─────────────────── */
+
   Widget _buildMediaPreview() {
     if (_selectedFile == null) return const SizedBox.shrink();
 
@@ -149,14 +158,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 alignment: Alignment.bottomCenter,
                 children: [
                   VideoPlayer(_videoController!),
-                  VideoProgressIndicator(_videoController!, allowScrubbing: true),
+                  VideoProgressIndicator(
+                    _videoController!,
+                    allowScrubbing: true,
+                  ),
                 ],
               ),
             );
           }
           return const SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()));
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          );
         },
       );
     }
@@ -164,12 +177,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return const SizedBox.shrink();
   }
 
+  /* ─────────────────── lifecycle ─────────────────── */
+
   @override
   void dispose() {
     _textController.dispose();
     _disposeVideo();
     super.dispose();
   }
+
+  /* ─────────────────── build ─────────────────── */
 
   @override
   Widget build(BuildContext context) {

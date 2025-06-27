@@ -18,6 +18,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _userNameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
 
   bool _obscureText = true;
   bool _isSigningUp = false;
@@ -188,7 +191,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Sign Up With SUST Email"),
-        backgroundColor: Colors.blue,
+        //backgroundColor: Colors.blue,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -202,6 +205,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             SizedBox(height: 20),
             TextField(
               controller: _usernameController,
+              focusNode: _userNameFocus,
+              onSubmitted:(_) => _emailFocus.requestFocus(),
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: "Username",
                 border: OutlineInputBorder(
@@ -218,6 +224,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             SizedBox(height: 10),
             TextField(
               controller: _emailController,
+              focusNode: _emailFocus,
+              onSubmitted:(_) => _passwordFocus.requestFocus(),
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 labelText: "Email",
                 border: OutlineInputBorder(
@@ -236,6 +245,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             TextField(
               controller: _passwordController,
               obscureText: _obscureText,
+              focusNode: _passwordFocus,
+              onSubmitted:(_) => _passwordFocus.unfocus(),
+              textInputAction: TextInputAction.done,
               decoration: InputDecoration(
                 labelText: "Password",
                 border: OutlineInputBorder(

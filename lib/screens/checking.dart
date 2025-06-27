@@ -50,7 +50,6 @@ class _RootScreenState extends State<RootScreen> {
       appBar: AppBar(
         title: Text("Campus Connect"),
         centerTitle: true,
-        backgroundColor: Colors.blue,
       ),
       body: Center(child: CircularProgressIndicator()),
     );
