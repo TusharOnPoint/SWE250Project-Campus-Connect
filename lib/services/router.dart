@@ -3,6 +3,7 @@ import 'package:campus_connect/screens/checking.dart';
 import 'package:campus_connect/screens/login.dart';
 import 'package:campus_connect/screens/post_detail_screen.dart';
 import 'package:campus_connect/screens/signup.dart';
+import 'package:campus_connect/screens/user_info_form.dart';
 import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:campus_connect/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,9 @@ class AppRouter {
 
       case '/addConversation':
         return MaterialPageRoute(builder: (_) => AddConversationScreen());
+
+      case '/userInfoForm':
+        return MaterialPageRoute(builder: (_) => UserInfoForm());
 
       // case '/messageDetail':
       //   final args = settings.arguments as Map<String, dynamic>;

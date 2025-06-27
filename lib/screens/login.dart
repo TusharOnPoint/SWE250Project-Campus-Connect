@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'forgot_password.dart';
@@ -12,6 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
+  Map<String, dynamic> userData = {};
 
   bool _obscureText = true;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,6 +25,21 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+
+  Future<bool> doesFieldExist(String docId, String fieldName) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(docId)
+        .get();
+
+    if (doc.exists) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      userData = data;
+      return data.containsKey(fieldName);
+    }
+    return false;
+  }
+
 
   void _login() async {
     String email = _emailController.text.trim();
@@ -51,7 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text("Login Successful!")));
-          Navigator.pushReplacementNamed(context, '/home');
+
+          // navigate to
+          if (await doesFieldExist(userCredential.user!.uid, 'isProfileUpdated') ) {
+            print('Field exists');
+            Navigator.pushReplacementNamed(context, '/home');
+          } else {
+            Navigator.pushReplacementNamed(context, '/userInfoForm');
+            print('Field does not exist');
+          }
+
         } else {
           showDialog(
             context: context,

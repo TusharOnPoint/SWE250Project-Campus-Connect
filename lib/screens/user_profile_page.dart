@@ -274,15 +274,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   const SizedBox(height: 16),
 
                   // details
-                  _buildProfileDetail(Icons.school,      'University',
-                      userData!['university'] ?? 'Not set'),
-                  _buildProfileDetail(Icons.work,        'Workplace',
-                      userData!['workplace'] ?? 'Not set'),
-                  _buildProfileDetail(Icons.sports_soccer,'Hobbies',
-                      userData!['hobbies'] ?? 'Not set'),
-                  _buildProfileDetail(Icons.star,        'Achievements',
-                      userData!['achievements'] ?? 'Not set'),
-                  _buildBioSection(),
+                  _buildProfileDetail(Icons.school, "University", userData?['university'] ?? "Not set"),
+                  _buildProfileDetail(Icons.apartment, "Department", userData?['department'] ?? "Not set"),
+                  _buildProfileDetail(Icons.book, "Course", userData?['course'] ?? "Not set"),
+                  _buildProfileDetail(Icons.calendar_today, "Year", userData?['year']?.toString() ?? "Not set"),
+                  _buildProfileDetail(Icons.timeline, "Semester", userData?['semester']?.toString() ?? "Not set"),
+                  _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
+                  _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
+                  _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
+
 
                   // posts
                   const SizedBox(height: 16),
