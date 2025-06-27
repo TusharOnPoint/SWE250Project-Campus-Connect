@@ -67,6 +67,28 @@ class _PostCardState extends State<PostCard> {
             ? FieldValue.arrayUnion([widget.currentUserId])
             : FieldValue.arrayRemove([widget.currentUserId])
       });
+
+      // Send notification only if it was a like (not unlike)
+      if (!wasLiked && widget.currentUserId != postData['authorId']) {
+        final currentUserDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.currentUserId)
+            .get();
+        final username = currentUserDoc.data()?['username'] ?? 'Someone';
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(postData['authorId'])
+            .collection('notifications')
+            .add({
+          'type': 'post_reaction',
+          'senderId': widget.currentUserId,
+          'postId': widget.postDoc.id,
+          'message': '$username liked your post.',
+          'timestamp': FieldValue.serverTimestamp(),
+          'seen': false,
+        });
+      }
     } catch (e) {
       setState(() {
         isLiked = wasLiked;
@@ -77,6 +99,7 @@ class _PostCardState extends State<PostCard> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +136,7 @@ class _PostCardState extends State<PostCard> {
                       Navigator.push(context, MaterialPageRoute(
                       builder: (context) => UserProfileScreen(user: author,),));
                     }
-                    
+
                   },
                 ),
                 subtitle: timestamp != null

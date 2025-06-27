@@ -63,10 +63,27 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
     if (selected.isEmpty) return;
 
     final groupRef = FirebaseFirestore.instance.collection('groups').doc(widget.groupId);
+    final groupDoc = await groupRef.get();
+    final groupName = groupDoc.data()?['name'] ?? 'a group';
 
     await groupRef.update({
       'participants': FieldValue.arrayUnion(selected),
     });
+
+    for (String userId in selected) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+        'type': 'group_invite',
+        'senderId': currentUser.uid,
+        'groupId': widget.groupId,
+        'message': 'You have been invited to join the group "$groupName"',
+        'timestamp': FieldValue.serverTimestamp(),
+        'seen': false,
+      });
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Friends invited successfully')),
@@ -74,6 +91,7 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
 
     Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {

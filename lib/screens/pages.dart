@@ -5,7 +5,7 @@ class PagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Pages')),
-      body: Center(child: Text('Pages screen content goes here')),
+      body: Center(child: Text('Coming Soon...')),
     );
   }
 }

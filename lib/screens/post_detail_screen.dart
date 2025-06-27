@@ -26,13 +26,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
-    await widget.postDoc.reference.collection('comments').add({
+    final commentRef = await widget.postDoc.reference.collection('comments').add({
       'text': text,
       'userId': widget.currentUserId,
       'timestamp': Timestamp.now(),
     });
 
     _commentController.clear();
+
+    // Send notification to the post author if commenter is not the author
+    final postAuthorId = widget.postDoc['authorId'];
+    if (widget.currentUserId != postAuthorId) {
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.currentUserId)
+          .get();
+      final username = currentUserDoc.data()?['username'] ?? 'Someone';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(postAuthorId)
+          .collection('notifications')
+          .add({
+        'type': 'comment',
+        'senderId': widget.currentUserId,
+        'postId': widget.postDoc.id,
+        'message': '$username commented on your post.',
+        'timestamp': FieldValue.serverTimestamp(),
+        'seen': false,
+      });
+    }
   }
 
   @override

@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:video_player/video_player.dart';
 
+import '../widgets/postCard.dart';
 import 'invite_friend_screen.dart';
 
 const cloudinaryUploadPreset = 'your_upload_preset';
@@ -213,113 +214,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   }
 
   Widget buildPostTile(DocumentSnapshot doc) {
-    final post = doc.data() as Map<String, dynamic>? ?? {};
-    final createdBy = post['createdBy'];
-    final postId = post['id'] ?? doc.id;
-    if (createdBy == null) return SizedBox();
-
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(createdBy).get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || !snapshot.data!.exists) return ListTile(title: Text('Loading...'));
-
-        final user = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-        final username = user['username'] ?? 'User';
-        final profileUrl = user['profileImage'] ?? '';
-        final timestamp = post['createdAt'] != null
-            ? (post['createdAt'] as Timestamp).toDate()
-            : DateTime.now();
-        final likes = post['likes'] ?? [];
-        final isLiked = likes.contains(currentUser.uid);
-        final commentsCount = post['commentsCount'] ?? 0;
-
-        return Card(
-          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.all(12),
-                leading: CircleAvatar(
-                  backgroundImage:
-                  profileUrl.isNotEmpty ? NetworkImage(profileUrl) : null,
-                  child: profileUrl.isEmpty ? Icon(Icons.person) : null,
-                ),
-                title: Text(username),
-                subtitle: Text(timeago.format(timestamp)),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == 'edit') await editPost(postId, post['text'] ?? '');
-                    if (value == 'delete') {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text('Delete Post?'),
-                          content: Text('Confirm delete this post?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text('Cancel')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: Text('Delete')),
-                          ],
-                        ),
-                      ) ??
-                          false;
-                      if (confirm) await deletePost(postId);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    if (createdBy == currentUser.uid)
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    if (createdBy == currentUser.uid)
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
-                ),
-              ),
-              if ((post['text'] ?? '').isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(post['text']),
-                ),
-              if ((post['imageUrl'] ?? '').isNotEmpty || (post['videoUrl'] ?? '').isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: post['imageUrl'].isNotEmpty
-                      ? Image.network(post['imageUrl'])
-                      : _VideoPlayerWidget(url: post['videoUrl']),
-                ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: isLiked ? Colors.red : null,
-                      ),
-                      onPressed: () => toggleLike(postId, likes),
-                    ),
-                    Text('${likes.length}'),
-                    SizedBox(width: 16),
-                    InkWell(
-                      onTap: () => openCommentsScreen(postId),
-                      child: Row(
-                        children: [
-                          Icon(Icons.comment_outlined),
-                          SizedBox(width: 4),
-                          Text('$commentsCount'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return PostCard(
+      postDoc: doc,
+      currentUserId: currentUser.uid,
     );
   }
 
@@ -329,17 +226,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       appBar: AppBar(
         title: Text(widget.groupName),
         actions: [
-          IconButton(
-            icon: Icon(Icons.person_add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => InviteFriendsScreen(groupId: widget.groupId),
-                ),
-              );
-            },
-          ),
           if (widget.visibility == 'private')
             TextButton(
               onPressed: requestToJoinGroup,
@@ -347,65 +233,129 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             )
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(12.0),
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('groups').doc(widget.groupId).get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final groupData = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+          final coverUrl = groupData['coverImageUrl'] ?? '';
+          final participants = List<String>.from(groupData['participants'] ?? []);
+          final nameController = TextEditingController(text: (groupData['groupName'] ?? widget.groupName) ?? '');
+
+          return SingleChildScrollView(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
+                Stack(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: postController,
-                        decoration: InputDecoration(
-                          labelText: 'Write a post...',
-                          border: OutlineInputBorder(),
-                        ),
+                    coverUrl.isNotEmpty
+                        ? Image.network(
+                      coverUrl,
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                    )
+                        : Container(
+                      width: double.infinity,
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: const Center(child: Text('No Cover Image')),
+                    ),
+                    Positioned(
+                      right: 16,
+                      bottom: 16,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+
+                           _updateCoverImage();
+                        },
+                        icon: const Icon(Icons.edit),
+                        label: const Text('Edit Cover'),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: isLoading ? null : createPost,
-                      child: Text('Post'),
-                    ),
                   ],
                 ),
-                SizedBox(height: 10),
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: pickMedia,
-                      icon: Icon(Icons.image),
-                      label: Text('Attach Image/Video'),
+
+                const SizedBox(height: 12),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: TextFormField(
+                    controller: nameController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
                     ),
-                    if (selectedFile != null)
-                      Text('File Selected', style: TextStyle(color: Colors.green)),
-                  ],
+                    onFieldSubmitted: (newName) {
+                      FirebaseFirestore.instance
+                          .collection('groups')
+                          .doc(widget.groupId)
+                          .update({'groupName': newName});
+                    },
+                  ),
                 ),
-                if (isLoading) Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(),
+
+                const SizedBox(height: 12),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('${participants.length} Members',
+                          style: const TextStyle(fontSize: 16)),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => InviteFriendsScreen(groupId: widget.groupId),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Member'),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Divider(height: 30),
+
+                // Post Composer UI (scrollable with ListView inside a fixed height box)
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    children: [
+                      // Add your post composer UI here
+                    ],
+                  ),
+                ),
+
+                SizedBox(
+                  height: 400, // or MediaQuery height-based value
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: posts.length + (hasMorePosts ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == posts.length) {
+                        return isLoadingMore
+                            ? const Center(child: CircularProgressIndicator())
+                            : const SizedBox.shrink();
+                      }
+                      return buildPostTile(posts[index]);
+                    },
+                  ),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: posts.length + (hasMorePosts ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == posts.length) {
-                  return isLoadingMore
-                      ? Center(child: CircularProgressIndicator())
-                      : SizedBox.shrink();
-                }
-                return buildPostTile(posts[index]);
-              },
-            ),
-          ),
-        ],
+          );
+        },
       ),
+
+
     );
   }
 
@@ -431,6 +381,29 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Join request sent')));
   }
+  Future<void> _updateCoverImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    final file = File(image.path);
+    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudinaryCloudName/image/upload');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = cloudinaryUploadPreset
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    final response = await request.send();
+    if (response.statusCode == 200) {
+      final resData = jsonDecode(await response.stream.bytesToString());
+      final imageUrl = resData['secure_url'];
+      await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(widget.groupId)
+          .update({'coverImageUrl': imageUrl});
+      setState(() {}); // Refresh UI
+    }
+  }
+
 }
 
 class _VideoPlayerWidget extends StatefulWidget {
@@ -476,3 +449,4 @@ class __VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
     );
   }
 }
+
