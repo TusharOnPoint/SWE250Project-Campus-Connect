@@ -1,3 +1,4 @@
+import 'package:campus_connect/widgets/widgetBuilder.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -191,6 +192,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 1),
     );
   }
 }

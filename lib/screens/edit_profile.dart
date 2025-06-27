@@ -97,8 +97,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Profile"),
-        backgroundColor: Colors.white30,
+        centerTitle: true,
+        title: const Text("Edit Profile"),
         elevation: 10,
       ),
       body: SingleChildScrollView(

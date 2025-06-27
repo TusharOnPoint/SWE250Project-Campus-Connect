@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -60,6 +61,61 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
+  /// Opens an existing 1-to-1 conversation with user, or creates one.
+  Future<void> _openChat() async {
+    // You can’t chat with yourself
+    if (widget.user['uid'] == _currentUid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You can’t message yourself.")),
+      );
+      return;
+    }
+
+    final currentUser = FirebaseAuth.instance.currentUser!;
+    final selectedUserId = widget.user['uid'] as String;
+
+    // 1. look for an existing private conversation
+    final existing = await _firestore
+        .collection('conversations')
+        .where('type', isEqualTo: 'private')
+        .where('participants', arrayContains: currentUser.uid)
+        .get();
+
+    for (final doc in existing.docs) {
+      final participants = List<String>.from(doc['participants']);
+      if (participants.length == 2 && participants.contains(selectedUserId)) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ChatScreen(conversationId: doc.id)),
+        );
+        return; // done
+      }
+    }
+
+    // 2. otherwise create a brand-new conversation
+    final userDoc =
+        await _firestore.collection('users').doc(selectedUserId).get();
+    final userData = userDoc.data() as Map<String, dynamic>;
+
+    final convoRef = _firestore.collection('conversations').doc();
+    await convoRef.set({
+      'conversationId': convoRef.id,
+      'conversationName': userData['username'] ?? 'Chat',
+      'conversationProfile': userData['profileImage'] ?? '',
+      'type': 'private',
+      'participants': [currentUser.uid, selectedUserId],
+      'lastMessage': '',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    });
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ChatScreen(conversationId: convoRef.id)),
+    );
+  }
+  
   Future<void> _sendRequest() async {
     await FriendManager.sendFriendRequest(
       context, _currentUid, widget.user['uid'], widget.user['username']);
@@ -262,9 +318,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       _buildFriendButton(),
                       const SizedBox(width: 30),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: navigate to chat
-                        },
+                        onPressed: widget.user['uid'] == _currentUid ? null : _openChat,
                         icon: const Icon(Icons.message_outlined),
                         label: const Text('Message'),
                       ),
@@ -282,7 +336,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
                   _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
                   _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
-
+                  _buildBioSection(),
 
                   // posts
                   const SizedBox(height: 16),

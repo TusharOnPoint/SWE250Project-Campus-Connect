@@ -60,7 +60,7 @@ class _UserInfoFormState extends State<UserInfoForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Complete Your Profile')),
+      appBar: AppBar(title: const Text('Complete Your Profile'), centerTitle: true,),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
