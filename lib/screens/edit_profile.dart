@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class EditProfileScreen extends StatefulWidget {
   @override
@@ -12,6 +13,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _dobController = TextEditingController();
   final TextEditingController _universityController = TextEditingController();
   final TextEditingController _workplaceController = TextEditingController();
   final TextEditingController _hobbiesController = TextEditingController();
@@ -42,6 +44,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         final data = userDoc.data() as Map<String, dynamic>;
         setState(() {
           _nameController.text = data['name'] ?? '';
+          _dobController.text = data['dob'] ?? '';
           _universityController.text = data['university'] ?? '';
           _workplaceController.text = data['workplace'] ?? '';
           _hobbiesController.text = data['hobbies'] ?? '';
@@ -60,6 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (user != null) {
       await _firestore.collection('users').doc(user.uid).update({
         'name': _nameController.text,
+        'dob': _dobController.text,
         'university': _universityController.text,
         'workplace': _workplaceController.text,
         'hobbies': _hobbiesController.text,
@@ -70,6 +74,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'semester': semester,
       });
       Navigator.pop(context);
+    }
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1960),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+      });
     }
   }
 
@@ -112,7 +130,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: _selectDate,
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: _dobController,
+                  decoration: InputDecoration(
+                    labelText: "Date of Birth",
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             _buildDropdown(
               label: 'Department',
               value: department,
@@ -150,7 +182,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _buildDropdown(
               label: 'University',
               value: _universityController.text.isEmpty ? null : _universityController.text,
-              items: universities.where((u) => u.isNotEmpty).toList(),
+              items: universities,
               onChanged: (val) => setState(() => _universityController.text = val ?? ''),
             ),
             SizedBox(height: 20),

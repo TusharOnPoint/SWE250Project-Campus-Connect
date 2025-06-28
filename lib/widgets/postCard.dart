@@ -105,6 +105,80 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  void _editPost() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController _editController =
+        TextEditingController(text: postData['text']);
+
+        return AlertDialog(
+          title: const Text('Edit Post'),
+          content: TextField(
+            controller: _editController,
+            maxLines: null,
+            decoration: const InputDecoration(hintText: 'Update your post...'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final updatedText = _editController.text.trim();
+                if (updatedText.isNotEmpty) {
+                  await widget.postDoc.reference.update({'text': updatedText});
+                  setState(() {
+                    postData['text'] = updatedText;
+                  });
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deletePost() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await widget.postDoc.reference.delete();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post deleted')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete post')),
+        );
+      }
+    }
+  }
+
   // expandable text widget
 
   Widget _buildPostText(String text) {
@@ -186,10 +260,27 @@ class _PostCardState extends State<PostCard> {
                 subtitle: timestamp != null
                     ? Text(DateFormat.yMMMd().add_jm().format(timestamp))
                     : null,
-                trailing: IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () {},
-                ),
+                trailing: postData['authorId'] == widget.currentUserId
+                    ? PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _editPost();
+                    } else if (value == 'delete') {
+                      _deletePost();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete'),
+                    ),
+                  ],
+                )
+                    : null,
               ),
 
               // media

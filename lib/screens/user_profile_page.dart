@@ -331,8 +331,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   _buildProfileDetail(Icons.school, "University", userData?['university'] ?? "Not set"),
                   _buildProfileDetail(Icons.apartment, "Department", userData?['department'] ?? "Not set"),
                   _buildProfileDetail(Icons.book, "Course", userData?['course'] ?? "Not set"),
-                  _buildProfileDetail(Icons.calendar_today, "Year", userData?['year']?.toString() ?? "Not set"),
-                  _buildProfileDetail(Icons.timeline, "Semester", userData?['semester']?.toString() ?? "Not set"),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today, color: Colors.blue),
+                        SizedBox(width: 10),
+                        Text("Year & Semester:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "${userData?['year']?.toString() ?? 'Not set'} - ${userData?['semester']?.toString() ?? 'Not set'}",
+                            style: TextStyle(fontSize: 16, color: Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
                   _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
                   _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
