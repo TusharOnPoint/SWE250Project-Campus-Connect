@@ -34,7 +34,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   final _scroll = ScrollController();
 
   CollectionReference get _postsRef => FirebaseFirestore.instance.collection('groups').doc(widget.groupId).collection('posts');
-  DocumentReference get _groupDoc => FirebaseFirestore.instance.collection('groups').doc(widget.groupId);
+  DocumentReference  get _groupDoc  => FirebaseFirestore.instance.collection('groups').doc(widget.groupId);
 
   @override
   void initState() {
@@ -52,17 +52,19 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     super.dispose();
   }
 
+  /* ------------------------- media picker -------------------------- */
   Future<void> _pickMedia() async {
-    final res = await FilePicker.platform.pickFiles(type: FileType.media, allowMultiple: false, withData: true);
+    final res = await FilePicker.platform.pickFiles(type: FileType.media, withData: true);
     if (res == null || res.files.isEmpty) return;
     final ext = res.files.single.extension?.toLowerCase() ?? '';
     setState(() {
-      _pickResult = res;
-      _fileType = ['mp4', 'mov', 'avi'].contains(ext) ? 'video' : 'image';
+      _pickResult   = res;
+      _fileType     = ['mp4', 'mov', 'avi'].contains(ext) ? 'video' : 'image';
       _previewBytes = _fileType == 'image' ? res.files.single.bytes : null;
     });
   }
 
+  /* ------------------------- create post --------------------------- */
   Future<void> _createPost() async {
     final text = _controller.text.trim();
     if (text.isEmpty && _pickResult == null) return;
@@ -76,13 +78,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     final ref = _postsRef.doc();
     await ref.set({
-      'id': ref.id,
-      'text': text,
-      'mediaUrl': mediaUrl,
-      'mediaType': _fileType ?? '',
-      'authorId': _uid,
-      'timestamp': FieldValue.serverTimestamp(),
-      'likes': <String>[],
+      'id'        : ref.id,
+      'text'      : text,
+      'mediaUrl'  : mediaUrl,
+      'mediaType' : _fileType ?? '',
+      'authorId'  : _uid,
+      'timestamp' : FieldValue.serverTimestamp(),
+      'likes'     : <String>[],
     });
 
     _controller.clear();
@@ -98,6 +100,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     _fetchPage();
   }
 
+  /* ------------------------- paging ------------------------------- */
   Future<void> _tryFetchPage() async {
     final g = await _groupDoc.get();
     final members = List<String>.from(g['members'] ?? []);
@@ -125,6 +128,61 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     });
   }
 
+  /* ------------------------- admin helpers ------------------------ */
+  Future<bool> _isAdmin() async {
+    final g = await _groupDoc.get();
+    final admins = List<String>.from(g['admins'] ?? []);
+    return admins.contains(_uid);
+  }
+
+  Future<void> _showPending() async {
+    final g = await _groupDoc.get();
+    final pending = List<String>.from(g['pendingRequests'] ?? []);
+    if (pending.isEmpty) {
+      showDialog(context: context, builder: (_) => const AlertDialog(content: Text('No pending requests')));
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchUsers(pending),
+        builder: (c, s) {
+          if (!s.hasData) return const Center(child: CircularProgressIndicator());
+          final users = s.data!;
+          return ListView(
+            children: users.map((u) {
+              final uid = u['uid'];
+              return ListTile(
+                leading: CircleAvatar(backgroundImage: u['photoUrl'] != null ? NetworkImage(u['photoUrl']) : null, child: u['photoUrl'] == null ? const Icon(Icons.person) : null),
+                title: Text(u['username'] ?? uid),
+                trailing: Wrap(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: () async {
+                        await _groupDoc.update({'members': FieldValue.arrayUnion([uid]), 'pendingRequests': FieldValue.arrayRemove([uid])});
+                        Navigator.pop(context);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () async {
+                        await _groupDoc.update({'pendingRequests': FieldValue.arrayRemove([uid])});
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  /* ------------------------- members list ------------------------- */
   Future<void> _showMembers() async {
     showModalBottomSheet(
       context: context,
@@ -139,10 +197,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             itemBuilder: (_, i) {
               final m = members[i];
               return ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: m['photoUrl'] != null ? NetworkImage(m['photoUrl']) : null,
-                  child: m['photoUrl'] == null ? const Icon(Icons.person) : null,
-                ),
+                leading: CircleAvatar(backgroundImage: m['photoUrl'] != null ? NetworkImage(m['photoUrl']) : null, child: m['photoUrl'] == null ? const Icon(Icons.person) : null),
                 title: Text(m['username'] ?? m['uid']),
                 subtitle: Text(m['role']),
               );
@@ -156,12 +211,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   Future<List<Map<String, dynamic>>> _fetchMembersData() async {
     final g = await _groupDoc.get();
     final memberIds = List<String>.from(g['members'] ?? []);
-    final adminIds = List<String>.from(g['admins'] ?? []);
+    final adminIds  = List<String>.from(g['admins']  ?? []);
     if (memberIds.isEmpty) return [];
     final users = await _fetchUsers(memberIds);
-    for (var u in users) {
-      u['role'] = adminIds.contains(u['uid']) ? 'admin' : 'member';
-    }
+    for (var u in users) { u['role'] = adminIds.contains(u['uid']) ? 'admin' : 'member'; }
     users.sort((a, b) => memberIds.indexOf(a['uid']).compareTo(memberIds.indexOf(b['uid'])));
     return users;
   }
@@ -179,6 +232,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     return result;
   }
 
+  /* ------------------------- UI ----------------------------- */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,8 +243,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           final data = snap.data!.data() as Map<String, dynamic>? ?? {};
           final memberIds = List<String>.from(data['members'] ?? []);
-          final isMember = memberIds.contains(_uid);
           final banner = data['coverImageUrl'] ?? '';
+          final isMember = memberIds.contains(_uid);
 
           return SingleChildScrollView(
             controller: _scroll,
@@ -210,6 +264,34 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       InkWell(onTap: _showMembers, child: Text('${memberIds.length} members', style: const TextStyle(decoration: TextDecoration.underline))),
                     ],
                   ),
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder<bool>(
+                  future: _isAdmin(),
+                  builder: (c, s) {
+                    final admin = s.data ?? false;
+                    if (!isMember && !admin) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Row(
+                        children: [
+                          if (admin)
+                            ElevatedButton.icon(icon: const Icon(Icons.pending), label: const Text('Pending'), onPressed: _showPending),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.person_add_alt),
+                            label: const Text('Invite friends'),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => InviteFriendsScreen(groupId: widget.groupId,),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const Divider(height: 30),
                 if (isMember) ...[
@@ -231,7 +313,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                             const Spacer(),
                             ElevatedButton(
                               onPressed: _uploading ? null : _createPost,
-                              child: _uploading ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Post'),
+                              child: _uploading
+                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Text('Post'),
                             ),
                           ],
                         ),
