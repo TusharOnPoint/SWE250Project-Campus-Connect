@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/reset_password.dart';
 import 'package:campus_connect/services/user_sevice.dart';
 import 'package:campus_connect/widgets/widgetBuilder.dart';
 import 'package:file_picker/file_picker.dart';
@@ -70,20 +71,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     //_fetchUserData();
-    return Scaffold(
+    return Builder(
+        builder: (context) => Scaffold(
 
       appBar: AppBar(
         elevation: 15,
         centerTitle: true,
         title: Text('Profile'),
-        actions: [
-          TextButton.icon(
-            onPressed: () => _showLogoutDialog(context),
-            icon: Icon(Icons.logout, color: Colors.red),
-            label: Text("Logout", style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
+      endDrawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blueAccent),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundImage: userData?['profileImage'] != null
+                        ? NetworkImage(userData!['profileImage'])
+                        : AssetImage('assets/images/user_placeholder.jpg') as ImageProvider,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    userData?['username'] ?? "User",
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                  Text(
+                    _auth.currentUser?.email ?? "",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.lock_reset),
+              title: Text("Reset Password"),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ResetPasswordScreen()));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.red),
+              title: Text("Logout", style: TextStyle(color: Colors.red)),
+              onTap: () => _showLogoutDialog(context),
+            ),
+          ],
+        ),
+      ),
+
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -173,8 +212,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildProfileDetail(Icons.school, "University", userData?['university'] ?? "Not set"),
                 _buildProfileDetail(Icons.apartment, "Department", userData?['department'] ?? "Not set"),
                 _buildProfileDetail(Icons.book, "Course", userData?['course'] ?? "Not set"),
-                _buildProfileDetail(Icons.calendar_today, "Year", userData?['year']?.toString() ?? "Not set"),
-                _buildProfileDetail(Icons.timeline, "Semester", userData?['semester']?.toString() ?? "Not set"),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.blue),
+                      SizedBox(width: 10),
+                      Text("Year & Semester:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "${userData?['year']?.toString() ?? 'Not set'} - ${userData?['semester']?.toString() ?? 'Not set'}",
+                          style: TextStyle(fontSize: 16, color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
                 _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
                 _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
@@ -250,6 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       bottomNavigationBar: CustomWidgetBuilder.buildBottomNavBar(context, 2),
+    )
     );
   }
 

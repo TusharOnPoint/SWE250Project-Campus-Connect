@@ -49,6 +49,7 @@ class _AddConversationScreenState extends State<AddConversationScreen> {
       'conversationProfile': '', // You can add group photo upload later
       'type': 'group',
       'participants': [currentUser.uid, ...selectedUserIds],
+      'createdBy': FirebaseAuth.instance.currentUser!.uid,
       'lastMessage': '',
       'lastMessageTime': FieldValue.serverTimestamp(),
     });

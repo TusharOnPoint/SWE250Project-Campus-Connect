@@ -110,27 +110,39 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 final name = data['conversationName'] ?? 'Unnamed Group';
                 final profile = data['conversationProfile'] ?? '';
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
-                    child: profile.isEmpty ? Icon(Icons.group) : null,
+                return Dismissible(
+                  key: Key(doc.id),
+                  direction: (data['createdBy'] == currentUser.uid)
+                      ? DismissDirection.endToStart
+                      : DismissDirection.none,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Icon(Icons.delete, color: Colors.white),
                   ),
-                  title: Text(name),
-                  subtitle: Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(conversationId: doc.id),
+                  confirmDismiss: (direction) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Delete Conversation'),
+                        content: Text('Are you sure you want to delete this conversation?'),
+                        actions: [
+                          TextButton(child: Text('Cancel'), onPressed: () => Navigator.of(context).pop(false)),
+                          TextButton(child: Text('Delete'), onPressed: () => Navigator.of(context).pop(true)),
+                        ],
                       ),
                     );
                   },
+                  onDismissed: (direction) async {
+                    await FirebaseFirestore.instance.collection('conversations').doc(doc.id).delete();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Conversation deleted')),
+                    );
+                  },
+                  child: buildConversationTile(data, doc.id),
                 );
+
               } else {
                 // Render private using FutureBuilder to fetch other participant
                 final participantIds = List<String>.from(data['participants']);
@@ -169,7 +181,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
+                      //trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -194,5 +206,88 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
       ),
     );
+  }
+
+  Widget buildConversationTile(Map<String, dynamic> data, String conversationId) {
+    final conversationType = data['type'] ?? 'group';
+    final lastMessage = (data['lastMessage'] ?? '').toString();
+    final subtitle = lastMessage.isNotEmpty ? lastMessage : 'No messages yet';
+    final seen = data.containsKey('seenBy')
+        ? List<String>.from(data['seenBy']).contains(currentUser.uid)
+        : false;
+
+    if (conversationType == 'group') {
+      final name = data['conversationName'] ?? 'Unnamed Group';
+      final profile = data['conversationProfile'] ?? '';
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
+          child: profile.isEmpty ? Icon(Icons.group) : null,
+        ),
+        title: Text(name),
+        subtitle: Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        //trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatScreen(conversationId: conversationId),
+            ),
+          );
+        },
+      );
+    } else {
+      final participantIds = List<String>.from(data['participants']);
+      final otherUserId = participantIds.firstWhere((id) => id != currentUser.uid, orElse: () => '');
+
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return ListTile(
+              title: Text("Loading..."),
+              subtitle: Text("Fetching user info"),
+            );
+          }
+
+          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+            return ListTile(
+              title: Text("Unknown user"),
+              subtitle: Text(subtitle),
+            );
+          }
+
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+          final name = userData['username'] ?? 'Unknown';
+          final profile = userData['profileImage'] ?? '';
+
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundImage: profile.isNotEmpty ? NetworkImage(profile) : null,
+              child: profile.isEmpty ? Icon(Icons.person) : null,
+            ),
+            title: Text(name),
+            subtitle: Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            //trailing: seen ? null : Icon(Icons.circle, color: Colors.blueAccent, size: 10),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ChatScreen(conversationId: conversationId),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
   }
 }
