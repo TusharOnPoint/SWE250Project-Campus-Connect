@@ -52,7 +52,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     super.dispose();
   }
 
-  /* ------------------------- media picker -------------------------- */
   Future<void> _pickMedia() async {
     final res = await FilePicker.platform.pickFiles(type: FileType.media, withData: true);
     if (res == null || res.files.isEmpty) return;
@@ -64,7 +63,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     });
   }
 
-  /* ------------------------- create post --------------------------- */
   Future<void> _createPost() async {
     final text = _controller.text.trim();
     if (text.isEmpty && _pickResult == null) return;
@@ -100,7 +98,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     _fetchPage();
   }
 
-  /* ------------------------- paging ------------------------------- */
   Future<void> _tryFetchPage() async {
     final g = await _groupDoc.get();
     final members = List<String>.from(g['members'] ?? []);
@@ -128,7 +125,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     });
   }
 
-  /* ------------------------- admin helpers ------------------------ */
   Future<bool> _isAdmin() async {
     final g = await _groupDoc.get();
     final admins = List<String>.from(g['admins'] ?? []);
@@ -142,7 +138,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       showDialog(context: context, builder: (_) => const AlertDialog(content: Text('No pending requests')));
       return;
     }
-
     showModalBottomSheet(
       context: context,
       builder: (_) => FutureBuilder<List<Map<String, dynamic>>>(
@@ -182,7 +177,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  /* ------------------------- members list ------------------------- */
   Future<void> _showMembers() async {
     showModalBottomSheet(
       context: context,
@@ -206,6 +200,18 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _requestJoin() async {
+    final g = await _groupDoc.get();
+    final members  = List<String>.from(g['members'] ?? []);
+    final pending  = List<String>.from(g['pendingRequests'] ?? []);
+    if (members.contains(_uid) || pending.contains(_uid)) return;
+    await _groupDoc.update({'pendingRequests': FieldValue.arrayUnion([_uid])});
+    setState(() {
+      
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Join request sent')));
   }
 
   Future<List<Map<String, dynamic>>> _fetchMembersData() async {
@@ -232,7 +238,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     return result;
   }
 
-  /* ------------------------- UI ----------------------------- */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,8 +248,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           final data = snap.data!.data() as Map<String, dynamic>? ?? {};
           final memberIds = List<String>.from(data['members'] ?? []);
+          final pendingIds = List<String>.from(data['pendingRequests'] ?? []);
           final banner = data['coverImageUrl'] ?? '';
           final isMember = memberIds.contains(_uid);
+          final hasRequested = pendingIds.contains(_uid);
 
           return SingleChildScrollView(
             controller: _scroll,
@@ -270,7 +277,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   future: _isAdmin(),
                   builder: (c, s) {
                     final admin = s.data ?? false;
-                    if (!isMember && !admin) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
@@ -278,16 +284,20 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                           if (admin)
                             ElevatedButton.icon(icon: const Icon(Icons.pending), label: const Text('Pending'), onPressed: _showPending),
                           const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.person_add_alt),
-                            label: const Text('Invite friends'),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => InviteFriendsScreen(groupId: widget.groupId,),
+                          if (isMember || admin)
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.person_add_alt),
+                              label: const Text('Invite friends'),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => InviteFriendsScreen(groupId: widget.groupId)),
                               ),
+                            )
+                          else
+                            ElevatedButton(
+                              onPressed: hasRequested ? null : _requestJoin,
+                              child: Text(hasRequested ? 'Requested' : 'Join group'),
                             ),
-                          ),
                         ],
                       ),
                     );
@@ -313,9 +323,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                             const Spacer(),
                             ElevatedButton(
                               onPressed: _uploading ? null : _createPost,
-                              child: _uploading
-                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Text('Post'),
+                              child: _uploading ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Post'),
                             ),
                           ],
                         ),
