@@ -32,7 +32,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
     _search.dispose();
     super.dispose();
   }
-  //my-groups stream
+
+  /* ------------------------------------------------ my-groups stream ----- */
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _myGroupsStream() {
     final coll = FirebaseFirestore.instance.collection('groups');
     final members$ = coll.where('members', arrayContains: _uid).snapshots();
@@ -49,7 +50,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
     });
   }
 
-  //global fetch+filter
+  /* ------------------------------------------------ global fetch+filter -- */
+  /// Reads the first [limit] groups ordered by name, then filters locally.
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _searchStream(
       String q, {
       int limit = 200,

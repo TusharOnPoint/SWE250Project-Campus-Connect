@@ -98,8 +98,6 @@ class NotificationScreen extends StatelessWidget {
         .update({'seen': true});
   }
 
-  // …inside NotificationScreen (replace the old _handleTap)
-
   Future<void> _handleTap(
     BuildContext context,
     String type,
@@ -108,7 +106,7 @@ class NotificationScreen extends StatelessWidget {
     String? groupId,
   ) async {
     switch (type) {
-      /* ------------------------------------------------ friend request ---- */
+      // friend request
       case 'friend_acceptance':
       case 'friend_request':
         final snap =
@@ -138,7 +136,7 @@ class NotificationScreen extends StatelessWidget {
         );
         break;
 
-      /* ------------------------------------------------ group invite ------ */
+      // group invite
       case 'group_invite':
         if (groupId == null) {
           ScaffoldMessenger.of(
@@ -182,7 +180,7 @@ class NotificationScreen extends StatelessWidget {
         }
         break;
 
-      /* ------------------------------------------------ post reactions ---- */
+      // post reactions
       case 'post_reaction':
       case 'post_comment':
         try {
@@ -219,7 +217,7 @@ class NotificationScreen extends StatelessWidget {
         }
         break;
 
-      /* ------------------------------------------------ default ----------- */
+      // default
       default:
         ScaffoldMessenger.of(
           context,
