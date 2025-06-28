@@ -1,97 +1,165 @@
-import 'package:flutter/material.dart';
+// -----------------------------------------------------------------------------
+// GroupsScreen – my groups normally; when searching, fetch first N groups
+// ordered by name and filter client-side (case-insensitive).
+// -----------------------------------------------------------------------------
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
+
 import 'create_group_screen.dart';
 import 'group_feed.dart';
 
 class GroupsScreen extends StatefulWidget {
+  const GroupsScreen({super.key});
   @override
-  _GroupsScreenState createState() => _GroupsScreenState();
+  State<GroupsScreen> createState() => _GroupsScreenState();
 }
 
 class _GroupsScreenState extends State<GroupsScreen> {
-  final currentUser = FirebaseAuth.instance.currentUser!;
-  final TextEditingController searchController = TextEditingController();
+  final _uid    = FirebaseAuth.instance.currentUser!.uid;
+  final _search = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild every time the text changes → stream switch happens.
+    _search.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /* ------------------------------------------------ my-groups stream ----- */
+  Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _myGroupsStream() {
+    final coll = FirebaseFirestore.instance.collection('groups');
+    final members$ = coll.where('members', arrayContains: _uid).snapshots();
+    final admins$  = coll.where('admins',  arrayContains: _uid).snapshots();
+
+    return Rx.combineLatest2(members$, admins$, (
+      QuerySnapshot<Map<String, dynamic>> m,
+      QuerySnapshot<Map<String, dynamic>> a,
+    ) {
+      final Map<String, DocumentSnapshot<Map<String, dynamic>>> uniq = {};
+      for (final d in m.docs) uniq[d.id] = d;
+      for (final d in a.docs) uniq[d.id] = d;
+      return uniq.values.toList();
+    });
+  }
+
+  /* ------------------------------------------------ global fetch+filter -- */
+  /// Reads the first [limit] groups ordered by name, then filters locally.
+  Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _searchStream(
+      String q, {
+      int limit = 200,
+    }) {
+    return FirebaseFirestore.instance
+        .collection('groups')
+        .orderBy('name')            // case-sensitive ordering is fine
+        .limit(limit)
+        .snapshots()
+        .map((snap) => snap.docs
+            .where((d) =>
+                (d['name'] ?? '')
+                    .toString()
+                    .toLowerCase()
+                    .contains(q.toLowerCase()))
+            .toList());
+  }
 
   @override
   Widget build(BuildContext context) {
+    final query     = _search.text.trim();
+    final searching = query.isNotEmpty;
+    final stream    =
+        searching ? _searchStream(query) : _myGroupsStream();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Groups'),
+        title: const Text('Communities'),
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
-            tooltip: 'Create Group',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => CreateGroupScreen()),
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Create group',
+            onPressed: () =>
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => CreateGroupScreen())),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _search,
+              decoration: const InputDecoration(
+                hintText: 'Search groups…',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      body: StreamBuilder<List<DocumentSnapshot<Map<String, dynamic>>>>(
+        stream: stream,
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final groups = snap.data ?? [];
+          if (groups.isEmpty) {
+            return Center(
+              child: Text(
+                searching
+                    ? 'No groups match “$query”.'
+                    : 'You are not a member of any groups.',
+              ),
+            );
+          }
+
+          return ListView.separated(
+            itemCount: groups.length,
+            separatorBuilder: (_, __) =>
+                const Divider(height: 0),
+            itemBuilder: (context, i) {
+              final g    = groups[i];
+              final data = g.data()!;
+              final membersCnt =
+                  (data['members'] as List<dynamic>? ?? []).length;
+
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: (data['coverImageUrl'] ?? '').isNotEmpty
+                      ? NetworkImage(data['coverImageUrl'])
+                      : null,
+                  child: (data['coverImageUrl'] ?? '').isEmpty
+                      ? const Icon(Icons.groups)
+                      : null,
+                ),
+                title: Text(data['name'] ?? 'Unnamed'),
+                subtitle:
+                    Text('$membersCnt member${membersCnt == 1 ? '' : 's'}'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroupFeedScreen(
+                      groupId: g.id,
+                      groupName: data['name'] ?? '',
+                    ),
+                  ),
+                ),
               );
             },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                labelText: 'Search My Groups',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (val) => setState(() {}),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('groups')
-                  .where('members', arrayContains: currentUser.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-                final filteredGroups = docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final groupName = (data['name'] ?? '').toString().toLowerCase();
-                  return groupName.contains(searchController.text.trim().toLowerCase());
-                }).toList();
-
-                if (filteredGroups.isEmpty) {
-                  return Center(child: Text('No groups found.'));
-                }
-
-                return ListView.builder(
-                  itemCount: filteredGroups.length,
-                  itemBuilder: (context, index) {
-                    final group = filteredGroups[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(group['name'] ?? ''),
-                      subtitle: Text(group['description'] ?? ''),
-                      leading: CircleAvatar(child: Icon(Icons.group)),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => GroupFeedScreen(
-                              groupId: filteredGroups[index].id,
-                              groupName: group['name'] ?? '', visibility: '',
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

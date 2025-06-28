@@ -1,3 +1,6 @@
+import 'package:campus_connect/screens/group_feed.dart';
+import 'package:campus_connect/screens/post_detail_screen.dart';
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -11,17 +14,20 @@ class NotificationScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text("Notifications")),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('notifications')
+                .orderBy('timestamp', descending: true)
+                .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
 
           final docs = snapshot.data!.docs;
-          if (docs.isEmpty) return const Center(child: Text("No notifications"));
+          if (docs.isEmpty)
+            return const Center(child: Text("No notifications"));
 
           return ListView.builder(
             itemCount: docs.length,
@@ -58,11 +64,16 @@ class NotificationScreen extends StatelessWidget {
 
   IconData _getIconForType(String type) {
     switch (type) {
-      case 'friend_request': return Icons.person_add;
-      case 'group_invite': return Icons.group_add;
-      case 'post_reaction': return Icons.thumb_up;
-      case 'post_comment': return Icons.comment;
-      default: return Icons.notifications;
+      case 'friend_request':
+        return Icons.person_add;
+      case 'group_invite':
+        return Icons.group_add;
+      case 'post_reaction':
+        return Icons.thumb_up;
+      case 'post_comment':
+        return Icons.comment;
+      default:
+        return Icons.notifications;
     }
   }
 
@@ -87,20 +98,132 @@ class NotificationScreen extends StatelessWidget {
         .update({'seen': true});
   }
 
-  void _handleTap(BuildContext context, String type, String senderId, String? postId, String? groupId) {
+  // …inside NotificationScreen (replace the old _handleTap)
+
+  Future<void> _handleTap(
+    BuildContext context,
+    String type,
+    String senderId,
+    String? postId,
+    String? groupId,
+  ) async {
     switch (type) {
+      /* ------------------------------------------------ friend request ---- */
+      case 'friend_acceptance':
       case 'friend_request':
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Navigate to $senderId\'s profile')));
+        final snap =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(senderId)
+                  .get();
+        if (!snap.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('User no longer exists')),
+            );
+            break;
+        }
+        final senderData = snap.data() as Map<String, dynamic>;
+        if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        UserProfileScreen(user: senderData,)
+              ),
+            );
+          }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Navigate to $senderId's profile")),
+        );
         break;
+
+      /* ------------------------------------------------ group invite ------ */
       case 'group_invite':
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Open group $groupId')));
+        if (groupId == null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Group not found')));
+          break;
+        }
+
+        try {
+          // fetch the group's name once so we can pass it to the feed screen
+          final snap =
+              await FirebaseFirestore.instance
+                  .collection('groups')
+                  .doc(groupId)
+                  .get();
+
+          if (!snap.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Group no longer exists')),
+            );
+            break;
+          }
+
+          final data = snap.data()!;
+          final groupName = data['name'] ?? 'Group';
+
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        GroupFeedScreen(groupId: groupId, groupName: groupName),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
         break;
+
+      /* ------------------------------------------------ post reactions ---- */
       case 'post_reaction':
       case 'post_comment':
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Open post $postId')));
+        try {
+          // fetch the group's name once so we can pass it to the feed screen
+          final snap =
+              await FirebaseFirestore.instance
+                  .collection('posts')
+                  .doc(postId)
+                  .get();
+
+          if (!snap.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Post no longer exists')),
+            );
+            break;
+          }
+
+          //final data = snap.data()!;
+
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) =>
+                        PostDetailScreen(postDoc: snap, currentUserId: userId,),
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
         break;
+
+      /* ------------------------------------------------ default ----------- */
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unknown notification')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Unknown notification')));
     }
   }
 }

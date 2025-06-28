@@ -66,9 +66,9 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
     final groupDoc = await groupRef.get();
     final groupName = groupDoc.data()?['name'] ?? 'a group';
 
-    await groupRef.update({
-      'participants': FieldValue.arrayUnion(selected),
-    });
+    // await groupRef.update({
+    //   'participants': FieldValue.arrayUnion(selected),
+    // });
 
     for (String userId in selected) {
       await FirebaseFirestore.instance

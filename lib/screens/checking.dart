@@ -27,7 +27,7 @@ class _RootScreenState extends State<RootScreen> {
 
       if (refreshedUser != null && refreshedUser.emailVerified) {
         print("Logged in and email verified");
-        print(user!.uid);
+        //print(user!.uid);
         _navigateTo('/home');
       } else {
         print("Email not verified");
