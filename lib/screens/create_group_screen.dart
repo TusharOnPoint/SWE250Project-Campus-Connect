@@ -6,34 +6,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-/// --- YOUR EXISTING CLOUDINARY UPLOADER -------------------------------------
-/// (Put it in its own util file or above this widget – omitted here for brevity)
-/// Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fileType)
-/// ---------------------------------------------------------------------------
-
 class CreateGroupScreen extends StatefulWidget {
   @override
   State<CreateGroupScreen> createState() => _CreateGroupScreenState();
 }
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
-  /* ─── controllers & state ──────────────────────────────────────────────── */
+  // ontrollers & state
   final _nameCtrl  = TextEditingController();
   final _descCtrl  = TextEditingController();
   String  _visibility = 'public';
 
-  FilePickerResult? _pickResult;        // holds the chosen image
-  Uint8List?        _previewBytes;      // for quick preview
+  FilePickerResult? _pickResult; 
+  Uint8List?        _previewBytes; 
   bool              _saving = false;
 
   final _uid = FirebaseAuth.instance.currentUser!.uid;
 
-  /* ─── pick image with FilePicker + preview ─────────────────────────────── */
+  // pick image with FilePicker + preview
   Future<void> _pickImage() async {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: false,
-      withData: true,                    // we need bytes for preview
+      withData: true,
     );
     if (res != null && res.files.isNotEmpty) {
       setState(() {
@@ -43,7 +38,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     }
   }
 
-  /* ─── create group (upload to Cloudinary) ──────────────────────────────── */
+  // create group
   Future<void> _createGroup() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
@@ -55,7 +50,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
     setState(() => _saving = true);
     try {
-      // Upload cover (if any) via your helper ------------------------------
       String coverUrl = '';
       if (_pickResult != null) {
         final url = await uploadToCloudinary(_pickResult, 'image');
@@ -63,7 +57,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         coverUrl = url;
       }
 
-      // Write the group document -------------------------------------------
       final doc = FirebaseFirestore.instance.collection('groups').doc();
       await doc.set({
         'id'             : doc.id,
@@ -89,7 +82,6 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     }
   }
 
-  /* ─── UI ───────────────────────────────────────────────────────────────── */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
