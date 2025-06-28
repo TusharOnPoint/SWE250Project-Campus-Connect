@@ -1,3 +1,4 @@
+import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -53,6 +54,16 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
                   return InkWell(
                     child: ListTile(
+                      onTap: () {
+                      if (data!=null)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              UserProfileScreen(user: data),
+                        ),
+                      );
+                    },
                       leading: CircleAvatar(
                         backgroundImage: NetworkImage(
                           data?['profileImage'] ??

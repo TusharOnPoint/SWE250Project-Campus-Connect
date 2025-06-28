@@ -61,7 +61,7 @@ class AppRouter {
               (_) => PostDetailScreen(
                 postDoc: args['postDoc'],
                 currentUserId: args['currentUserId'],
-                navigateToUserProfile: args['navigateToUserProfile'],
+                navigateToUserProfile: args['navigateToUserProfile'] ?? true,
               ),
         );
       //
