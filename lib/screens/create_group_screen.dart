@@ -6,10 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-/// --- YOUR EXISTING CLOUDINARY UPLOADER -------------------------------------
-/// (Put it in its own util file or above this widget – omitted here for brevity)
-/// Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fileType)
-/// ---------------------------------------------------------------------------
 
 class CreateGroupScreen extends StatefulWidget {
   @override
@@ -17,7 +13,7 @@ class CreateGroupScreen extends StatefulWidget {
 }
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
-  /* ─── controllers & state ──────────────────────────────────────────────── */
+  // controllers & state
   final _nameCtrl  = TextEditingController();
   final _descCtrl  = TextEditingController();
   String  _visibility = 'public';
@@ -28,7 +24,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   final _uid = FirebaseAuth.instance.currentUser!.uid;
 
-  /* ─── pick image with FilePicker + preview ─────────────────────────────── */
+  // pick image with FilePicker + preview
   Future<void> _pickImage() async {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -43,7 +39,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     }
   }
 
-  /* ─── create group (upload to Cloudinary) ──────────────────────────────── */
+  //  create group (upload to Cloudinary)
   Future<void> _createGroup() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
