@@ -55,7 +55,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  /* ─────────────────── setup video controller ─────────────────── */
+  /* ────────────────── setup video controller ─────────────────── */
 
   Future<void> _setupVideo(PlatformFile file) async {
     _disposeVideo();

@@ -46,10 +46,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
   bool _isStrongPassword(String password) {
     return password.length >= 6 &&
-        RegExp(r'[A-Z]').hasMatch(password) &&       // at least 1 uppercase
-        RegExp(r'[a-z]').hasMatch(password) &&       // at least 1 lowercase
-        RegExp(r'\d').hasMatch(password) &&          // at least 1 digit
-        RegExp(r'[^a-zA-Z0-9]').hasMatch(password); // at least 1 special char
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'\d').hasMatch(password) &&
+        RegExp(r'[^a-zA-Z0-9]').hasMatch(password);
     }
 
   Future<void> _signUp() async {
@@ -129,7 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        // 🔐 Send email verification
+        //  Send email verification
         await user.sendEmailVerification();
 
         await _firestore.collection("users").doc(user.uid).set({
@@ -143,7 +143,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _isSigningUp = false;
         });
 
-        showDialog( //
+        showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) {
@@ -212,6 +212,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  InputDecoration _buildInputDecoration(String labelText, {bool isPassword = false}) {
+    return InputDecoration(
+      labelText: labelText,
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.blue, width: 2.0),
+      ),
+      suffixIcon: isPassword
+          ? IconButton(
+        icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+        onPressed: () {
+          setState(() {
+            _obscureText = !_obscureText;
+          });
+        },
+      )
+          : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,18 +259,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               focusNode: _userNameFocus,
               onSubmitted:(_) => _emailFocus.requestFocus(),
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: "Username",
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
-                ),
-              ),
+              decoration: _buildInputDecoration("Username"),
             ),
             SizedBox(height: 10),
             TextField(
@@ -253,18 +267,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               focusNode: _emailFocus,
               onSubmitted:(_) => _passwordFocus.requestFocus(),
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: "Email",
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
-                ),
-              ),
+              decoration: _buildInputDecoration("Email"),
               keyboardType: TextInputType.emailAddress,
             ),
             SizedBox(height: 10),
@@ -274,26 +277,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               focusNode: _passwordFocus,
               onSubmitted:(_) => _confirmPasswordFocus.requestFocus(),
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () {
-                    setState(() {
-                      _obscureText = !_obscureText;
-                    });
-                  },
-                ),
-              ),
+              decoration: _buildInputDecoration("Password", isPassword: true)
             ),
             SizedBox(height: 10),
             TextField(
@@ -302,26 +286,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               obscureText: _obscureText,
               onSubmitted: (_) => _confirmPasswordFocus.unfocus(),
               textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                labelText: "Confirm Password",
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.blue, width: 2.0),
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () {
-                    setState(() {
-                      _obscureText = !_obscureText;
-                    });
-                  },
-                ),
-              ),
+              decoration: _buildInputDecoration("Confirm Password", isPassword: true),
             ),
 
             SizedBox(height: 20),

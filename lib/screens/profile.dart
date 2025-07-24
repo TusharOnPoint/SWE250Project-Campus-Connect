@@ -262,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (context) => CreatePostScreen()),
                     );
                   },
-                  icon: Icon(Icons.add_a_photo),
+                  icon: Icon(Icons.access_time_sharp),
                   label: Text("Post Content"),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
                 ),

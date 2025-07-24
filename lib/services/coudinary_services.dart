@@ -9,7 +9,6 @@ Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fi
     print("no file selected");
     return null;
   }
-  //File file = File(filePickerResult.files.single.path!);
 
   final fileBytes = filePickerResult.files.single.bytes;
   final fileName = filePickerResult.files.single.name;
@@ -22,7 +21,6 @@ Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fi
   );
   var request = http.MultipartRequest("POST", uri);
 
-  //var fileBytes = await file.readAsBytes();
   if (fileBytes == null) {
     print("File has no bytes");
     return null;
@@ -32,7 +30,6 @@ Future<String?> uploadToCloudinary(FilePickerResult? filePickerResult, String fi
 
   request.files.add(multiPartFile);
   request.fields["upload_preset"] = "campus_connect_tushar_sajib";
-  //request.fields["resource_type"] = "raw";
 
   var response = await request.send();
   var responseBody = await response.stream.bytesToString();

@@ -4,11 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:campus_connect/services/user_sevice.dart';
-import 'package:campus_connect/services/friend_manager.dart';   // <-- adjust path if needed
+import 'package:campus_connect/services/friend_manager.dart';
 import '../widgets/postCard.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final Map<String, dynamic> user;  
+  final Map<String, dynamic> user;
 
   const UserProfileScreen({Key? key, required this.user}) : super(key: key);
 
@@ -44,18 +44,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _initRelationship() async {
-    final myData = await _userService.fetchUserData(); 
+    final myData = await _userService.fetchUserData();
     if (!mounted || myData == null) return;
 
-    final sent     = List<String>.from(myData['friend_requests_sent'] ?? []);
-    final friends  = List<String>.from(myData['friends'] ?? []);
+    final sent = List<String>.from(myData['friend_requests_sent'] ?? []);
+    final friends = List<String>.from(myData['friends'] ?? []);
     final received = List<String>.from(myData['friend_requests'] ?? []);
 
     final viewedUid = widget.user['uid'] as String;
 
     setState(() {
-      _isFriend          = friends.contains(viewedUid);
-      _isRequestSent     = sent.contains(viewedUid);
+      _isFriend = friends.contains(viewedUid);
+      _isRequestSent = sent.contains(viewedUid);
       _isRequestReceived = received.contains(viewedUid);
       _loadingRelationship = false;
     });
@@ -75,11 +75,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final selectedUserId = widget.user['uid'] as String;
 
     // 1. look for an existing private conversation
-    final existing = await _firestore
-        .collection('conversations')
-        .where('type', isEqualTo: 'private')
-        .where('participants', arrayContains: currentUser.uid)
-        .get();
+    final existing =
+        await _firestore
+            .collection('conversations')
+            .where('type', isEqualTo: 'private')
+            .where('participants', arrayContains: currentUser.uid)
+            .get();
 
     for (final doc in existing.docs) {
       final participants = List<String>.from(doc['participants']);
@@ -89,7 +90,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           context,
           MaterialPageRoute(builder: (_) => ChatScreen(conversationId: doc.id)),
         );
-        return; // done
+        return;
       }
     }
 
@@ -112,25 +113,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (!mounted) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ChatScreen(conversationId: convoRef.id)),
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(conversationId: convoRef.id),
+      ),
     );
   }
-  
+
   Future<void> _sendRequest() async {
     await FriendManager.sendFriendRequest(
-      context, _currentUid, widget.user['uid'], widget.user['username']);
+      context,
+      _currentUid,
+      widget.user['uid'],
+      widget.user['username'],
+    );
     setState(() => _isRequestSent = true);
   }
 
   Future<void> _cancelRequest() async {
     await FriendManager.cancelFriendRequest(
-      context, _currentUid, widget.user['uid'], widget.user['username']);
+      context,
+      _currentUid,
+      widget.user['uid'],
+      widget.user['username'],
+    );
     setState(() => _isRequestSent = false);
   }
 
   Future<void> _acceptRequest() async {
     await FriendManager.acceptFriendRequest(
-      context, _currentUid, widget.user['uid'], widget.user['username']);
+      context,
+      _currentUid,
+      widget.user['uid'],
+      widget.user['username'],
+    );
     setState(() {
       _isFriend = true;
       _isRequestReceived = false;
@@ -139,13 +154,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _declineRequest() async {
     await FriendManager.cancelReceivedRequest(
-      context, _currentUid, widget.user['uid'], widget.user['username']);
+      context,
+      _currentUid,
+      widget.user['uid'],
+      widget.user['username'],
+    );
     setState(() => _isRequestReceived = false);
   }
 
   Future<void> _unfriend() async {
     await FriendManager.unfriend(
-      context, _currentUid, widget.user['uid'], widget.user['username']);
+      context,
+      _currentUid,
+      widget.user['uid'],
+      widget.user['username'],
+    );
     setState(() => _isFriend = false);
   }
 
@@ -164,31 +187,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     if (_isRequestReceived) {
-      // dropdown- Accept  /  Delete
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: PopupMenuButton<String>(
           splashRadius: 24,
-          onSelected: (v) => v == 'accept' ? _acceptRequest() : _declineRequest(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: 'accept',
-              child: ListTile(
-                leading: Icon(Icons.check_circle_outline),
-                title: Text('Accept'),
-              ),
-            ),
-            PopupMenuItem(
-              value: 'decline',
-              child: ListTile(
-                leading: Icon(Icons.delete_outline),
-                title: Text('Delete', style: TextStyle(color: Colors.red),),
-              ),
-            ),
-          ],
+          onSelected:
+              (v) => v == 'accept' ? _acceptRequest() : _declineRequest(),
+          itemBuilder:
+              (_) => const [
+                PopupMenuItem(
+                  value: 'accept',
+                  child: ListTile(
+                    leading: Icon(Icons.check_circle_outline),
+                    title: Text('Accept'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'decline',
+                  child: ListTile(
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('Delete', style: TextStyle(color: Colors.red)),
+                  ),
+                ),
+              ],
           child: IgnorePointer(
             child: ElevatedButton.icon(
-              onPressed: () {}, 
+              onPressed: () {},
               icon: const Icon(Icons.person_add_alt),
               label: const Text('Respond'),
             ),
@@ -217,13 +241,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blue), const SizedBox(width: 10),
-          Text('$title:',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Icon(icon, color: Colors.blue),
+          const SizedBox(width: 10),
+          Text(
+            '$title:',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(detail,
-                style: const TextStyle(fontSize: 16, color: Colors.black87)),
+            child: Text(
+              detail,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
           ),
         ],
       ),
@@ -237,12 +266,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           const Icon(Icons.info_outline, color: Colors.blue),
           const SizedBox(width: 10),
-          const Text('Bio:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Bio:',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(userData?['bio'] ?? 'No bio set',
-                style: const TextStyle(fontSize: 16, color: Colors.black87)),
+            child: Text(
+              userData?['bio'] ?? 'No bio set',
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
           ),
         ],
       ),
@@ -261,137 +294,191 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('User Profile'), centerTitle: true),
-      body: userData == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            fit: BoxFit.cover,
-                            image: userData!['coverImage'] != null
-                                ? NetworkImage(userData!['coverImage'])
-                                : const AssetImage(
-                                        'assets/images/cover_placeholder.jpg')
-                                    as ImageProvider,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: -60,
-                        child: CircleAvatar(
-                          radius: 80,
-                          backgroundColor: Colors.blue,
-                          child: CircleAvatar(
-                            radius: 75,
-                            backgroundImage: userData!['profileImage'] != null
-                                ? NetworkImage(userData!['profileImage'])
-                                : const AssetImage(
-                                        'assets/images/user_placeholder.jpg')
-                                    as ImageProvider,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 80),
-
-                  //name & email
-                  Text(userData!['username'] ?? 'User Name',
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold)),
-                  Text(userData!['email'] ?? 'user@example.com',
-                      style:
-                          const TextStyle(fontSize: 16, color: Colors.grey)),
-
-                  // friend / message buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildFriendButton(),
-                      const SizedBox(width: 30),
-                      ElevatedButton.icon(
-                        onPressed: widget.user['uid'] == _currentUid ? null : _openChat,
-                        icon: const Icon(Icons.message_outlined),
-                        label: const Text('Message'),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // details
-                  _buildProfileDetail(Icons.school, "University", userData?['university'] ?? "Not set"),
-                  _buildProfileDetail(Icons.apartment, "Department", userData?['department'] ?? "Not set"),
-                  _buildProfileDetail(Icons.book, "Course", userData?['course'] ?? "Not set"),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 20.0),
-                    child: Row(
+      body:
+          userData == null
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
                       children: [
-                        Icon(Icons.calendar_today, color: Colors.blue),
-                        SizedBox(width: 10),
-                        Text("Year & Semester:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "${userData?['year']?.toString() ?? 'Not set'} - ${userData?['semester']?.toString() ?? 'Not set'}",
-                            style: TextStyle(fontSize: 16, color: Colors.black87),
+                        Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              fit: BoxFit.cover,
+                              image:
+                                  userData!['coverImage'] != null
+                                      ? NetworkImage(userData!['coverImage'])
+                                      : const AssetImage(
+                                            'assets/images/cover_placeholder.jpg',
+                                          )
+                                          as ImageProvider,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -60,
+                          child: CircleAvatar(
+                            radius: 80,
+                            backgroundColor: Colors.blue,
+                            child: CircleAvatar(
+                              radius: 75,
+                              backgroundImage:
+                                  userData!['profileImage'] != null
+                                      ? NetworkImage(userData!['profileImage'])
+                                      : const AssetImage(
+                                            'assets/images/user_placeholder.jpg',
+                                          )
+                                          as ImageProvider,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 80),
 
-                  _buildProfileDetail(Icons.work, "Workplace", userData?['workplace'] ?? "Not set"),
-                  _buildProfileDetail(Icons.sports_soccer, "Hobbies", userData?['hobbies'] ?? "Not set"),
-                  _buildProfileDetail(Icons.star, "Achievements", userData?['achievements'] ?? "Not set"),
-                  _buildBioSection(),
+                    //name & email
+                    Text(
+                      userData!['username'] ?? 'User Name',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      userData!['email'] ?? 'user@example.com',
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
 
-                  // posts
-                  const SizedBox(height: 16),
-                  const Text('Posts',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  StreamBuilder<QuerySnapshot>(
-                    stream: _fetchPosts(),
-                    builder: (context, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
-                      }
-                      if (snap.hasError) {
-                        return Text('Error: ${snap.error}');
-                      }
-                      if (!snap.hasData || snap.data!.docs.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text('No posts available.'),
-                        );
-                      }
-
-                      final posts = snap.data!.docs;
-                      return ListView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemCount: posts.length,
-                        itemBuilder: (_, i) => PostCard(
-                          postDoc: posts[i],
-                          currentUserId: _currentUid,
-                          navigateToUserProfile: false,
+                    // friend / message buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildFriendButton(),
+                        const SizedBox(width: 30),
+                        ElevatedButton.icon(
+                          onPressed:
+                              widget.user['uid'] == _currentUid
+                                  ? null
+                                  : _openChat,
+                          icon: const Icon(Icons.message_outlined),
+                          label: const Text('Message'),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // details
+                    _buildProfileDetail(
+                      Icons.school,
+                      "University",
+                      userData?['university'] ?? "Not set",
+                    ),
+                    _buildProfileDetail(
+                      Icons.apartment,
+                      "Department",
+                      userData?['department'] ?? "Not set",
+                    ),
+                    _buildProfileDetail(
+                      Icons.book,
+                      "Course",
+                      userData?['course'] ?? "Not set",
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6.0,
+                        horizontal: 20.0,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today, color: Colors.blue),
+                          SizedBox(width: 10),
+                          Text(
+                            "Year & Semester:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "${userData?['year']?.toString() ?? 'Not set'} - ${userData?['semester']?.toString() ?? 'Not set'}",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    _buildProfileDetail(
+                      Icons.work,
+                      "Workplace",
+                      userData?['workplace'] ?? "Not set",
+                    ),
+                    _buildProfileDetail(
+                      Icons.sports_soccer,
+                      "Hobbies",
+                      userData?['hobbies'] ?? "Not set",
+                    ),
+                    _buildProfileDetail(
+                      Icons.star,
+                      "Achievements",
+                      userData?['achievements'] ?? "Not set",
+                    ),
+                    _buildBioSection(),
+
+                    // posts
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Posts',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _fetchPosts(),
+                      builder: (context, snap) {
+                        if (snap.connectionState == ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
+                        }
+                        if (snap.hasError) {
+                          return Text('Error: ${snap.error}');
+                        }
+                        if (!snap.hasData || snap.data!.docs.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Text('No posts available.'),
+                          );
+                        }
+
+                        final posts = snap.data!.docs;
+                        return ListView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: posts.length,
+                          itemBuilder:
+                              (_, i) => PostCard(
+                                postDoc: posts[i],
+                                currentUserId: _currentUid,
+                                navigateToUserProfile: false,
+                              ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
     );
   }
 }

@@ -1,7 +1,4 @@
-// -----------------------------------------------------------------------------
-// GroupsScreen – my groups normally; when searching, fetch first N groups
-// ordered by name and filter client-side (case-insensitive).
-// -----------------------------------------------------------------------------
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +20,6 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   void initState() {
     super.initState();
-    // Rebuild every time the text changes → stream switch happens.
     _search.addListener(() => setState(() {}));
   }
 
@@ -50,15 +46,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
     });
   }
 
-  /* ------------------------------------------------ global fetch+filter -- */
-  /// Reads the first [limit] groups ordered by name, then filters locally.
+  // Reads the first [limit] groups ordered by name, then filters locally.
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _searchStream(
       String q, {
       int limit = 200,
     }) {
     return FirebaseFirestore.instance
         .collection('groups')
-        .orderBy('name')            // case-sensitive ordering is fine
+        .orderBy('name')
         .limit(limit)
         .snapshots()
         .map((snap) => snap.docs
