@@ -29,7 +29,8 @@ class _GroupsScreenState extends State<GroupsScreen> {
     super.dispose();
   }
 
-  /* ------------------------------------------------ my-groups stream ----- */
+  /// Returns a stream of groups where the current user is a member or admin.
+
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _myGroupsStream() {
     final coll = FirebaseFirestore.instance.collection('groups');
     final members$ = coll.where('members', arrayContains: _uid).snapshots();
@@ -46,7 +47,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
     });
   }
 
-  // Reads the first [limit] groups ordered by name, then filters locally.
+  /// Queries and returns a stream of up to [limit] groups ordered by name,
+  /// and filters them locally based on the search query [q].
+
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _searchStream(
       String q, {
       int limit = 200,
