@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../widgets/widgetBuilder.dart';
 import 'groups.dart';
-import 'pages.dart';
 import 'notifications.dart';
 import 'messages.dart';
 import 'add_friend.dart';
@@ -53,15 +52,6 @@ class HomeScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => GroupsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.pages),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PagesScreen()),
               );
             },
           ),

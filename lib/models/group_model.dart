@@ -7,10 +7,10 @@ class GroupModel {
   final String coverImageUrl;
   final String createdBy;
   final DateTime createdAt;
-  final String visibility; // 'public' or 'private'
-  final List<String> members; // user UIDs
-  final List<String> pendingRequests; // only for private groups
-  final Map<String, String> roles; // { uid: role } e.g. { 'abc123': 'admin' }
+  final String visibility;
+  final List<String> members;
+  final List<String> pendingRequests;
+  final Map<String, String> roles;
 
   GroupModel({
     required this.id,

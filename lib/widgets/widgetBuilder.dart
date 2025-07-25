@@ -2,29 +2,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../screens/explore.dart';
 
-class CustomWidgetBuilder {
-  // Named constants to avoid magic numbers
-  static const int homeIndex = 0;
-  static const int exploreIndex = 1;
-  static const int profileIndex = 2;
+// USING AN ENUM INSTEAD OF MAGIC NUMBERS
+enum NavIndex {
+  HOME, EXPLORE, PROFILE;
+}
 
-  static Widget buildBottomNavBar(BuildContext context, int idx) {
+class CustomWidgetBuilder {
+  
+  static Widget buildBottomNavBar(BuildContext context, int currentIndex) {
     return BottomNavigationBar(
       items: [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
-      currentIndex: idx,
+      currentIndex: currentIndex,
       onTap: (index) {
-        if (index == homeIndex && idx != homeIndex) {
+        if (index == NavIndex.HOME && currentIndex != NavIndex.HOME) {
           Navigator.pushNamed(context, '/home');
-        } else if (index == exploreIndex && idx != exploreIndex) {
+        } else if (index == NavIndex.EXPLORE && currentIndex != NavIndex.EXPLORE) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => ExploreScreen()),
           );
-        } else if (index == profileIndex && idx != profileIndex) {
+        } else if (index == NavIndex.PROFILE && currentIndex != NavIndex.PROFILE) {
           Navigator.pushNamed(context, '/profile');
         }
       },
