@@ -18,14 +18,14 @@ class CustomWidgetBuilder {
       ],
       currentIndex: currentIndex,
       onTap: (index) {
-        if (index == NavIndex.HOME && currentIndex != NavIndex.HOME) {
+        if (index == NavIndex.HOME.index && currentIndex != NavIndex.HOME.index) {
           Navigator.pushNamed(context, '/home');
-        } else if (index == NavIndex.EXPLORE && currentIndex != NavIndex.EXPLORE) {
+        } else if (index == NavIndex.EXPLORE.index && currentIndex != NavIndex.EXPLORE.index) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => ExploreScreen()),
           );
-        } else if (index == NavIndex.PROFILE && currentIndex != NavIndex.PROFILE) {
+        } else if (index == NavIndex.PROFILE.index && currentIndex != NavIndex.PROFILE.index) {
           Navigator.pushNamed(context, '/profile');
         }
       },

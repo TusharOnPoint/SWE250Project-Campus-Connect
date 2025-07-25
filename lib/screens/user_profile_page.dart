@@ -28,6 +28,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isRequestSent = false;
   bool _isRequestReceived = false;
   bool _loadingRelationship = true;
+  FriendRelationInfo? _friendRelationInfo;
 
   @override
   void initState() {
@@ -52,11 +53,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final received = List<String>.from(myData['friend_requests'] ?? []);
 
     final viewedUid = widget.user['uid'] as String;
+    final FriendRelationInfo friendRelationInfo = FriendRelationInfo(currentUserId: _currentUid, otherUserId: viewedUid, otherUsername: widget.user['username']);
 
     setState(() {
       _isFriend = friends.contains(viewedUid);
       _isRequestSent = sent.contains(viewedUid);
       _isRequestReceived = received.contains(viewedUid);
+      _friendRelationInfo = friendRelationInfo;
       _loadingRelationship = false;
     });
   }
@@ -122,9 +125,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _sendRequest() async {
     await FriendManager.sendFriendRequest(
       context,
-      _currentUid,
-      widget.user['uid'],
-      widget.user['username'],
+      _friendRelationInfo!,
     );
     setState(() => _isRequestSent = true);
   }
@@ -132,9 +133,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _cancelRequest() async {
     await FriendManager.cancelFriendRequest(
       context,
-      _currentUid,
-      widget.user['uid'],
-      widget.user['username'],
+      _friendRelationInfo!,
     );
     setState(() => _isRequestSent = false);
   }
@@ -142,9 +141,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _acceptRequest() async {
     await FriendManager.acceptFriendRequest(
       context,
-      _currentUid,
-      widget.user['uid'],
-      widget.user['username'],
+      _friendRelationInfo!,
     );
     setState(() {
       _isFriend = true;
@@ -155,9 +152,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _declineRequest() async {
     await FriendManager.cancelReceivedRequest(
       context,
-      _currentUid,
-      widget.user['uid'],
-      widget.user['username'],
+      _friendRelationInfo!,
     );
     setState(() => _isRequestReceived = false);
   }
@@ -165,9 +160,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _unfriend() async {
     await FriendManager.unfriend(
       context,
-      _currentUid,
-      widget.user['uid'],
-      widget.user['username'],
+      _friendRelationInfo!,
     );
     setState(() => _isFriend = false);
   }
