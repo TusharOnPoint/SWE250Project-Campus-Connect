@@ -171,7 +171,7 @@ class _AddFriendScreenState extends State<AddFriendScreen>
                       ? _buildRespondButton(userId, user['username'])
                       : ElevatedButton(
                     onPressed: () => isSent
-                        ? _cancelFriendRequest(
+                        ? _cancelFriendRequest( 
                         userId, user['username'])
                         : _sendFriendRequest(
                         userId, user['username']),
