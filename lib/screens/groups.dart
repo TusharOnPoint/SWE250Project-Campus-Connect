@@ -47,26 +47,32 @@ class _GroupsScreenState extends State<GroupsScreen> {
     });
   }
 
-  /// Queries and returns a stream of up to [limit] groups ordered by name,
-  /// and filters them locally based on the search query [q].
+  // Queries and returns a stream of up to [limit] groups ordered by name,
+  // and filters them locally based on the search query [q].
 
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> _searchStream(
-      String q, {
-      int limit = 200,
-    }) {
-    return FirebaseFirestore.instance
-        .collection('groups')
-        .orderBy('name')
-        .limit(limit)
-        .snapshots()
-        .map((snap) => snap.docs
-            .where((d) =>
-                (d['name'] ?? '')
-                    .toString()
-                    .toLowerCase()
-                    .contains(q.toLowerCase()))
-            .toList());
-  }
+  String q, {
+  int limit = 200,
+}) {
+  final lowercaseQuery = q.toLowerCase();
+
+  final groupsCollection = FirebaseFirestore.instance.collection('groups');
+  final orderedGroupsQuery = groupsCollection.orderBy('name').limit(limit);
+
+  final snapshotsStream = orderedGroupsQuery.snapshots();
+
+  return snapshotsStream.map((snapshot) {
+    final docs = snapshot.docs;
+
+    final filteredDocs = docs.where((doc) {
+      final name = (doc['name'] ?? '').toString().toLowerCase();
+      return name.contains(lowercaseQuery);
+    }).toList();
+
+    return filteredDocs;
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
