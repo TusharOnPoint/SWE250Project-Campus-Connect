@@ -1,3 +1,4 @@
+import 'package:campus_connect/models/userModel.dart';
 import 'package:campus_connect/screens/user_profile_page.dart';
 import 'package:campus_connect/services/user_sevice.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -222,9 +223,7 @@ class _PostCardState extends State<PostCard> {
     return FutureBuilder<Map<String, dynamic>?>(
       future: UserService.getUserDataByUid(postData['authorId']),
       builder: (context, snapshot) {
-        final author = snapshot.data;
-        final authorName = author?['username'] ?? 'Unknown';
-        final profileImage = author?['profileImage'] ?? '';
+        final UserModel author = UserModel.fromJson(snapshot as Map<String, dynamic>);
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
@@ -238,20 +237,20 @@ class _PostCardState extends State<PostCard> {
               // header
               ListTile(
                 leading: CircleAvatar(
-                  backgroundImage: profileImage.isNotEmpty
-                      ? NetworkImage(profileImage)
+                  backgroundImage: author.profileImageUrl.isNotEmpty
+                      ? NetworkImage(author.profileImageUrl)
                       : const AssetImage(
                               'assets/images/profile_placeholder.jpg')
                           as ImageProvider,
                 ),
                 title: InkWell(
-                  child: Text(authorName),
+                  child: Text(author.name),
                   onTap: () {
                     if (author != null && widget.navigateToUserProfile) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => UserProfileScreen(user: author),
+                          builder: (_) => UserProfileScreen(user: author.toJson()),
                         ),
                       );
                     }
