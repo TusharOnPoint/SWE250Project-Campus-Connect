@@ -64,8 +64,51 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
-  /// Opens an existing 1-to-1 conversation with user, or creates one.
-  Future<void> _openChat() async {
+   Future<String?> _getExistingPrivateChatId({
+    required FirebaseFirestore firestore,
+    required String currentUserId,
+    required String selectedUserId,
+  }) async {
+    final existing =
+        await firestore
+            .collection('conversations')
+            .where('type', isEqualTo: 'private')
+            .where('participants', arrayContains: currentUserId)
+            .get();
+
+    for (final doc in existing.docs) {
+      final participants = List<String>.from(doc['participants']);
+      if (participants.length == 2 && participants.contains(selectedUserId)) {
+        return doc.id;
+      }
+    }
+    return null;
+  }
+
+  Future<String> _createNewPrivateConversation({
+    required FirebaseFirestore firestore,
+    required String currentUserId,
+    required String selectedUserId,
+  }) async {
+    final userDoc =
+        await firestore.collection('users').doc(selectedUserId).get();
+    final userData = userDoc.data() as Map<String, dynamic>;
+
+    final convoRef = firestore.collection('conversations').doc();
+    await convoRef.set({
+      'conversationId': convoRef.id,
+      'conversationName': userData['username'] ?? 'Chat',
+      'conversationProfile': userData['profileImage'] ?? '',
+      'type': 'private',
+      'participants': [currentUserId, selectedUserId],
+      'lastMessage': '',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+    });
+
+    return convoRef.id;
+  }
+
+  Future<void> _openExistingOrCreateNewChatWithThisUser() async {
     // You can’t chat with yourself
     if (widget.user['uid'] == _currentUid) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -77,47 +120,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final currentUser = FirebaseAuth.instance.currentUser!;
     final selectedUserId = widget.user['uid'] as String;
 
-    // 1. look for an existing private conversation
-    final existing =
-        await _firestore
-            .collection('conversations')
-            .where('type', isEqualTo: 'private')
-            .where('participants', arrayContains: currentUser.uid)
-            .get();
+    final conversationId = await _getExistingPrivateChatId(
+      firestore: _firestore,
+      currentUserId: currentUser.uid,
+      selectedUserId: selectedUserId,
+    );
 
-    for (final doc in existing.docs) {
-      final participants = List<String>.from(doc['participants']);
-      if (participants.length == 2 && participants.contains(selectedUserId)) {
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ChatScreen(conversationId: doc.id)),
-        );
-        return;
-      }
+    if (conversationId != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(conversationId: conversationId),
+        ),
+      );
+      return;
     }
 
-    // 2. otherwise create a brand-new conversation
-    final userDoc =
-        await _firestore.collection('users').doc(selectedUserId).get();
-    final userData = userDoc.data() as Map<String, dynamic>;
-
-    final convoRef = _firestore.collection('conversations').doc();
-    await convoRef.set({
-      'conversationId': convoRef.id,
-      'conversationName': userData['username'] ?? 'Chat',
-      'conversationProfile': userData['profileImage'] ?? '',
-      'type': 'private',
-      'participants': [currentUser.uid, selectedUserId],
-      'lastMessage': '',
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    });
+    final newConversationId = await _createNewPrivateConversation(
+      firestore: _firestore,
+      currentUserId: currentUser.uid,
+      selectedUserId: selectedUserId,
+    );
 
     if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChatScreen(conversationId: convoRef.id),
+        builder: (_) => ChatScreen(conversationId: newConversationId),
       ),
     );
   }
@@ -357,7 +386,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           onPressed:
                               widget.user['uid'] == _currentUid
                                   ? null
-                                  : _openChat,
+                                  : _openExistingOrCreateNewChatWithThisUser,
                           icon: const Icon(Icons.message_outlined),
                           label: const Text('Message'),
                         ),
